@@ -63,7 +63,7 @@ jobs:
         run: cargo nextest run --workspace --features datadog-crashtracker/generate-unit-test-files --exclude builder --profile ci --test-threads=1 --verbose -E 'test(tracing_integration_tests::)'
         env:
           RUST_BACKTRACE: full
-      - name: "[${{ steps.rust-version.outputs.version}}] RUSTFLAGS=\"-C prefer-dynamic\" cargo nextest run --package test_spawn_from_lib --features prefer-dynamic -E '!test(tracing_integration_tests::)'"
+      - name: '[${{ steps.rust-version.outputs.version}}] RUSTFLAGS="-C prefer-dynamic" cargo nextest run --package test_spawn_from_lib --features prefer-dynamic -E ''!test(tracing_integration_tests::)'''
         shell: bash
         run: cargo nextest run --package test_spawn_from_lib --features prefer-dynamic -E '!test(tracing_integration_tests::)'
         env:
@@ -128,7 +128,6 @@ jobs:
           docker-images: false
           swap-storage: true
 
-
       - name: Cache
         uses: ./.github/actions/cache
         with:
@@ -150,7 +149,7 @@ jobs:
         run: |
           cargo run --bin release --features profiling,telemetry,data-pipeline,symbolizer,crashtracker,library-config,log,ddsketch --release -- --out $LIBDD_OUTPUT_FOLDER
 
-      - name: 'Publish libdatadog'
+      - name: "Publish libdatadog"
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # 4.6.1
         # Only upload the artifacts built with the default Rust version
         if: (success() || failure()) && matrix.rust_version == ''
@@ -242,16 +241,13 @@ jobs:
       labels: ubuntu-latest-16-cores
       group: APM Larger Runners
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # 3.10.0
         with:
           buildkitd-config: .github/buildkitd-16-cores.toml
-      -
-        name: Build and Generate FFI
+      - name: Build and Generate FFI
         uses: docker/bake-action@4ba453fbc2db7735392b93edf935aaf9b1e8f747 # 6.5.0
         with:
           targets: ${{ matrix.target }}
