@@ -35,9 +35,31 @@ jobs:
               state: 'open'
             });
             for (const pr of prs.data) {
-              await github.rest.actions.reRunWorkflow({
+              console.log(pr)
+
+              // Get workflow runs for the PR's branch
+              const runs = await github.rest.actions.listWorkflowRunsForRepo({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                run_id: pr.head.sha // This may need adjustment; see note below
+                branch: pr.head.ref,
+                event: "pull_request"
               });
+
+              console.log(runs)
+              
+              // Find the latest run for the desired workflow
+              const run = runs.data.workflow_runs.find(
+                r => r.name === "Block if there is an ongoing release" || r.path.endsWith('block_if_release.yml')
+              );
+              if (run) {
+                console.log(run)
+
+                await github.rest.actions.reRunWorkflow({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  run_id: run.id
+                });
+              } else {
+                console.log('There is no run')
+              }
             }
