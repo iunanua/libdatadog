@@ -3,7 +3,7 @@
 
 [package]
 name = "ddcommon"
-description = "ddcommon"
+description = "ddcommon description"
 edition.workspace = true
 version.workspace = true
 rust-version.workspace = true
