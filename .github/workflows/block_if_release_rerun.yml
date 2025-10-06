@@ -5,6 +5,7 @@ env:
 on: create
 
 permissions:
+  actions: write
   contents: read
 
 jobs:
@@ -35,7 +36,7 @@ jobs:
               state: 'open'
             });
             for (const pr of prs.data) {
-              console.log(pr)
+              console.log('Checking PR: ', pr.url)
 
               // Get workflow runs for the PR's branch
               const runs = await github.rest.actions.listWorkflowRunsForRepo({
@@ -44,15 +45,13 @@ jobs:
                 branch: pr.head.ref,
                 event: "pull_request"
               });
-
-              console.log(runs)
               
               // Find the latest run for the desired workflow
               const run = runs.data.workflow_runs.find(
                 r => r.name === "Block if there is an ongoing release" || r.path.endsWith('block_if_release.yml')
               );
               if (run) {
-                console.log(run)
+                console.log('Rerunning: ', run.id, run.html_url)
 
                 await github.rest.actions.reRunWorkflow({
                   owner: context.repo.owner,
