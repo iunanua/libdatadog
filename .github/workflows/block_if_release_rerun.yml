@@ -2,8 +2,7 @@ name: Rerun block_if_release on release branch creation
 env:
   RELEASE_BRANCH_PREFIX: release-v
 
-on:
-  create:
+on: create
 
 jobs:
   rerun-block-if-release:
