@@ -4,6 +4,9 @@ env:
 
 on: create
 
+permissions:
+  contents: read
+
 jobs:
   rerun-block-if-release:
     runs-on: ubuntu-latest
