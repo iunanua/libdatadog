@@ -16,10 +16,10 @@ jobs:
       - name: Check if ref is release branch
         id: check_release_branch
         run: |
-          echo "Event: ${{ github.event_name }}"
+          echo "Event: name: ${{ github.event_name }}, ref: ${{ github.event.ref }}"
           echo "Ref: ${{ github.ref }}"
           echo "Ref type: ${{ github.event.ref_type }}"  # branch or tag
-          if [[ "${{ github.event.ref_type }}" == "branch" && "${{ github.ref }}" == "refs/heads/${RELEASE_BRANCH_PREFIX}"* ]]; then
+          if [[ "${{ github.event.ref_type }}" == "branch" && "${{ github.event.ref }}" == "${RELEASE_BRANCH_PREFIX}"* ]]; then
             echo "is_release_branch=true" >> $GITHUB_OUTPUT
           else
             echo "is_release_branch=false" >> $GITHUB_OUTPUT
