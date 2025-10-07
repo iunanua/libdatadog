@@ -2,7 +2,8 @@ name: Rerun block_if_release on release branch creation
 env:
   RELEASE_BRANCH_PREFIX: release-v
 
-on: create
+# TODO: rerun on delete?
+on: [create, delete]
 
 permissions:
   actions: write
@@ -30,6 +31,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            // TODO: filter out inactive PRs checking last update (if possible)
             const prs = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
