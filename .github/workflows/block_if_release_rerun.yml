@@ -1,8 +1,7 @@
-name: Rerun block_if_release on release branch creation
+name: Rerun block_if_release when creating or deleting a release branch
 env:
   RELEASE_BRANCH_PREFIX: release-v
 
-# TODO: rerun on delete?
 on: [create, delete]
 
 permissions:
