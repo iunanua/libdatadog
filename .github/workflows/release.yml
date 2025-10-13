@@ -47,4 +47,3 @@ jobs:
           crate-name: ${{ inputs.crate }}
           check-semver: "true"
           check-package: "true"
-          pr-merge-strategy: "bors"
