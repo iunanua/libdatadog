@@ -1,9 +1,9 @@
 [package]
 name = "data-pipeline"
+version = "21.0.0"
 description = "Trace exporter package allowing sending data from datadog SDKs to the Trace Agent."
 rust-version.workspace = true
 edition.workspace = true
-version.workspace = true
 license.workspace = true
 autobenches = false
 
