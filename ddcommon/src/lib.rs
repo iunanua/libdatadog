@@ -290,3 +290,7 @@ impl Endpoint {
         }
     }
 }
+
+pub fn kaixo() {
+    println!("kaixo")
+}

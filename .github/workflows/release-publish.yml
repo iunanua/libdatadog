@@ -4,6 +4,10 @@ on:
     types: closed
     branches: [main]
 
+env:
+  GIT_USER_NAME: github-actions[bot]
+  GIT_USER_EMAIL: github-actions[bot]@users.noreply.github.com
+
 jobs:
   info:
     if: github.event.pull_request.merged
@@ -53,16 +57,21 @@ jobs:
         tool: cargo-release
     
     - uses: chainguard-dev/actions/setup-gitsign@0cda751b114eb55c388e88f7479292668165602a # v1.0.2
-
+    
     - name: Tag and push release
       run: |
         tag="${{ needs.info.outputs.crate }}-v${{ needs.info.outputs.version }}"
         tag_message="${{ needs.info.outputs.crate }} v${{ needs.info.outputs.version }} release."
         
-        # FIXME: set up git credentials so we can tag and push the release
-        # git tag -a "$tag" -m "\"$tag_message\""
-        # git push origin "$tag"
-        echo "git tag -a "$tag" -m "$tag_message""
+        echo "Setting git user name and email to ${{ env.GIT_USER_NAME }} and ${{ env.GIT_USER_EMAIL }}"
+
+        git config user.name "${{ env.GIT_USER_NAME }}"
+        git config user.email "${{ env.GIT_USER_EMAIL }}"
+        
+        git tag -a "$tag" -m "$tag_message"
+        git push origin "$tag"
+
+        echo "Tagged and pushed $tag"
 
     - name: Publish crate to crates.io
       run: |
