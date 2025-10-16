@@ -260,6 +260,7 @@ impl TelemetryClient {
 
     /// Starts the client
     pub async fn start(&self) {
+        ddcommon::kaixo("tron");
         _ = self
             .worker
             .send_msg(TelemetryActions::Lifecycle(LifecycleAction::Start))
