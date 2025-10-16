@@ -56,14 +56,20 @@ jobs:
       with:
         tool: cargo-release
     
+    - name: Publish crate to crates.io
+      id: publish
+      run: |
+        cargo publish --package ${{ needs.info.outputs.crate }} --token ${{ secrets.CARGO_REGISTRY_TOKEN || 'test_token' }} --dry-run
+        echo "✅ Successfully published ${{ needs.info.outputs.crate }} version ${{ needs.info.outputs.version }}"
+    
     - uses: chainguard-dev/actions/setup-gitsign@0cda751b114eb55c388e88f7479292668165602a # v1.0.2
+      if: steps.publish.outcome == 'success'
     
     - name: Tag and push release
+      if: steps.publish.outcome == 'success'
       run: |
         tag="${{ needs.info.outputs.crate }}-v${{ needs.info.outputs.version }}"
-
-        notes=$(./scripts/extract_changelog_vnext.sh ${{ needs.info.outputs.crate }}/CHANGELOG.md)
-        tag_message="${{ needs.info.outputs.crate }} v${{ needs.info.outputs.version }} release.\n\n$notes"
+        tag_message="${{ needs.info.outputs.crate }} v${{ needs.info.outputs.version }} release."
         
         echo "Setting git user name and email to ${{ env.GIT_USER_NAME }} and ${{ env.GIT_USER_EMAIL }}"
 
@@ -73,13 +79,5 @@ jobs:
         git tag -a "$tag" -m "$tag_message"
         git push origin "$tag"
 
-        echo "Tagged and pushed $tag"
-
-    - name: Publish crate to crates.io
-      run: |
-        cargo publish --package ${{ needs.info.outputs.crate }} --token ${{ secrets.CARGO_REGISTRY_TOKEN || 'test_token' }} --dry-run
-    
-    - name: Verify published version
-      run: |
-        echo "Published ${{ needs.info.outputs.crate }} version ${{ needs.info.outputs.version }}"
+        echo "✅ Tagged and pushed $tag"
     
