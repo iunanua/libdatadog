@@ -1,0 +1,78 @@
+name: Release - Tag and publish to crates.io
+on:
+  pull_request:
+    types: closed
+    branches: [main]
+
+jobs:
+  info:
+    if: github.event.pull_request.merged
+    outputs:
+      is-release: ${{ steps.check.outputs.is-release }}
+      crate: ${{ steps.parse.outputs.crate }}
+      version: ${{ steps.parse.outputs.version }}
+
+    runs-on: ubuntu-latest
+    steps:
+    - id: check
+      name: Check if release branch
+      run: |
+        branch="${{ github.event.pull_request.head.ref }}"
+        if [[ "$branch" =~ ^release/.+/.+$ ]]; then
+          echo "is-release=true" >> $GITHUB_OUTPUT
+        else
+          echo "is-release=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - id: parse
+      name: Parse crate and version from branch
+      if: steps.check.outputs.is-release == 'true'
+      run: |
+        branch="${{ github.event.pull_request.head.ref }}"
+        # Extract crate and version from release/{crate}/{version}
+        crate=$(echo "$branch" | cut -d'/' -f2)
+        version=$(echo "$branch" | cut -d'/' -f3)
+        echo "crate=$crate" >> $GITHUB_OUTPUT
+        echo "version=$version" >> $GITHUB_OUTPUT
+    
+  release:
+    permissions:
+      id-token: write # Enable OIDC
+      contents: write
+
+    needs: info
+    if: needs.info.outputs.is-release == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Rust
+      uses: taiki-e/install-action@d6d752794628f1e1fffa3c4d3c8874e06f043d50 # 2.62.15
+      with:
+        tool: cargo-release
+    
+    - uses: chainguard-dev/actions/setup-gitsign@0cda751b114eb55c388e88f7479292668165602a # v1.0.2
+      with:
+        sign-tags: true
+
+    - name: Tag and push release
+      run: |
+        tag="${{ needs.info.outputs.crate }}-v${{ needs.info.outputs.version }}"
+        tag_message="${{ needs.info.outputs.crate }} v${{ needs.info.outputs.version }} release."
+        
+        # FIXME: set up git credentials so we can tag and push the release
+        # git tag -a "$tag" -m "\"$tag_message\""
+        # git push origin "$tag"
+        echo "git tag -a "$tag" -m "$tag_message""
+
+    - name: Publish crate to crates.io
+      run: |
+        cargo publish --package ${{ needs.info.outputs.crate }} --version ${{ needs.info.outputs.version }} --token ${{ secrets.CARGO_REGISTRY_TOKEN }} --dry-run
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    
+    - name: Verify published version
+      run: |
+        echo "Published ${{ needs.info.outputs.crate }} version ${{ needs.info.outputs.version }}"
+    
