@@ -61,4 +61,4 @@ jobs:
           crate-name: ${{ inputs.crate }}
           check-semver: "true"
           check-package: "true"
-          release-notes: ${{ steps.extract-release-notes.outputs.release-notes }}
+          pr-release-notes: ${{ steps.extract-release-notes.outputs.release-notes }}
