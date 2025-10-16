@@ -291,6 +291,6 @@ impl Endpoint {
     }
 }
 
-pub fn kaixo(epa: &str) {
-    println!("kaixo {epa}")
+pub fn kaixo(epa: &str, t: &str) {
+    println!("kaixo {epa} - {t}")
 }
