@@ -1,4 +1,4 @@
-name: Open a release PR
+name: Release - Open a release PR
 on:
   workflow_dispatch:
     inputs:
@@ -47,3 +47,4 @@ jobs:
           crate-name: ${{ inputs.crate }}
           check-semver: "true"
           check-package: "true"
+          
