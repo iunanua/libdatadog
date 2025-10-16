@@ -2,6 +2,10 @@
 
 ## vNext
 
+- Fix kaixo function
+
+## v21.0.2
+
 - New kaixo function
 
 ## v21.0.1
