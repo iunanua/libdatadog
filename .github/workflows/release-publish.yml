@@ -61,7 +61,9 @@ jobs:
     - name: Tag and push release
       run: |
         tag="${{ needs.info.outputs.crate }}-v${{ needs.info.outputs.version }}"
-        tag_message="${{ needs.info.outputs.crate }} v${{ needs.info.outputs.version }} release."
+
+        notes=$(./scripts/extract_changelog_vnext.sh ${{ needs.info.outputs.crate }}/CHANGELOG.md)
+        tag_message="${{ needs.info.outputs.crate }} v${{ needs.info.outputs.version }} release.\n\n$notes"
         
         echo "Setting git user name and email to ${{ env.GIT_USER_NAME }} and ${{ env.GIT_USER_EMAIL }}"
 
