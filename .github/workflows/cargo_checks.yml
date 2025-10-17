@@ -1,0 +1,29 @@
+name: Cargo checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  cargo-deny:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+    - uses: EmbarkStudios/cargo-deny-action@v2
+      with:
+        command: check advisories bans licenses sources
+
+  semver:
+    runs-on: ubuntu-latest
+    env:
+      # Unset the global `RUSTFLAGS` env to allow warnings.
+      # cargo-semver-checks intentionally re-locks dependency versions
+      # before checking, and we shouldn't fail here if a dep has a warning.
+      #
+      # More context:
+      # https://github.com/libp2p/rust-libp2p/pull/4932#issuecomment-1829014527
+      # https://github.com/obi1kenobi/cargo-semver-checks/issues/589
+      RUSTFLAGS: ''
+    steps:
+      - uses: actions/checkout@v5
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
+      - run: cargo semver-checks
