@@ -29,26 +29,52 @@ jobs:
           tool: cargo-release
       
       - id: detect
-        name: Detect changed packages
+        name: Detect changed packages and their baseline tags
         run: |
           # Get changed packages from cargo release changes
           # Extract package names from lines like "Changes for {package} from"
-          packages=$(cargo release changes 2>&1 | grep "Changes for" | sed 's/.*Changes for \([^ ]*\) from.*/\1/' | sort -u | tr '\n' ',' | sed 's/,$//')
+          packages_list=$(cargo release changes 2>&1 | grep "Changes for" | sed 's/.*Changes for \([^ ]*\) from.*/\1/' | sort -u)
           
-          if [ -z "$packages" ]; then
+          if [ -z "$packages_list" ]; then
             echo "has-changes=false" >> $GITHUB_OUTPUT
-            echo "packages=" >> $GITHUB_OUTPUT
+            echo "packages=[]" >> $GITHUB_OUTPUT
             echo "No changed packages detected"
           else
             echo "has-changes=true" >> $GITHUB_OUTPUT
-            echo "packages=$packages" >> $GITHUB_OUTPUT
-            echo "Changed packages: $packages"
+            
+            # Build JSON array with package and baseline-rev for each package
+            packages_json="[]"
+            while IFS= read -r pkg; do
+              [ -z "$pkg" ] && continue
+              
+              # Find the latest tag for this package (format: {package}-v{version})
+              latest_tag=$(git tag -l "${pkg}-v*" --sort=-version:refname | head -n 1)
+              
+              if [ -z "$latest_tag" ]; then
+                echo "Warning: No tag found for package $pkg, skipping baseline"
+                baseline=""
+              else
+                baseline="$latest_tag"
+                echo "Package $pkg -> baseline $baseline"
+              fi
+              
+              # Add to JSON array with compact output (-c flag)
+              packages_json=$(echo "$packages_json" | jq -c --arg pkg "$pkg" --arg baseline "$baseline" '. += [{"package": $pkg, "baseline-rev": $baseline}]')
+            done <<< "$packages_list"
+            
+            # Output as compact JSON (ensure no newlines)
+            echo "packages=$(echo "$packages_json" | jq -c .)" >> $GITHUB_OUTPUT
+            echo "Changed packages with baselines: $packages_json"
           fi
 
   semver:
     needs: detect-changes
     if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.detect-changes.outputs.changed-packages) }}
     env:
       # Unset the global `RUSTFLAGS` env to allow warnings.
       # cargo-semver-checks intentionally re-locks dependency versions
@@ -60,7 +86,11 @@ jobs:
       RUSTFLAGS: ''
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
-      
+        with:
+          fetch-depth: 0
+          fetch-tags: true
       - uses: obi1kenobi/cargo-semver-checks-action@5b298c9520f7096a4683c0bd981a7ac5a7e249ae # v2.8
         with:
-          package: ${{ needs.detect-changes.outputs.changed-packages }}
+          package: ${{ matrix.package }}
+          baseline-rev: ${{ matrix.baseline-rev }}
+          
