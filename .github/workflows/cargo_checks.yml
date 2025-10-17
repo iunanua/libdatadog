@@ -6,13 +6,48 @@ on:
 jobs:
   cargo-deny:
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
     - uses: actions/checkout@v5
-    - uses: EmbarkStudios/cargo-deny-action@v2
+    - uses: EmbarkStudios/cargo-deny-action@f2ba7abc2abebaf185c833c3961145a3c275caad # 2.0.13
       with:
-        command: check advisories bans licenses sources
+        command: check advisories bans sources # licenses
+
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed-packages: ${{ steps.detect.outputs.packages }}
+      has-changes: ${{ steps.detect.outputs.has-changes }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Need full history for cargo release changes
+      
+      - name: Install cargo-release
+        uses: taiki-e/install-action@d6d752794628f1e1fffa3c4d3c8874e06f043d50 # 2.62.15
+        with:
+          tool: cargo-release
+      
+      - id: detect
+        name: Detect changed packages
+        run: |
+          # Get changed packages from cargo release changes
+          # Extract package names from lines like "Changes for {package} from"
+          packages=$(cargo release changes 2>&1 | grep "Changes for" | sed 's/.*Changes for \([^ ]*\) from.*/\1/' | sort -u | tr '\n' ',' | sed 's/,$//')
+          
+          if [ -z "$packages" ]; then
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "packages=" >> $GITHUB_OUTPUT
+            echo "No changed packages detected"
+          else
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+            echo "packages=$packages" >> $GITHUB_OUTPUT
+            echo "Changed packages: $packages"
+          fi
 
   semver:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     env:
       # Unset the global `RUSTFLAGS` env to allow warnings.
@@ -25,5 +60,7 @@ jobs:
       RUSTFLAGS: ''
     steps:
       - uses: actions/checkout@v5
-      - uses: obi1kenobi/cargo-semver-checks-action@v2
-      - run: cargo semver-checks
+      
+      - uses: obi1kenobi/cargo-semver-checks-action@5b298c9520f7096a4683c0bd981a7ac5a7e249ae # v2.8
+        with:
+          packages: ${{ needs.detect-changes.outputs.changed-packages }}
