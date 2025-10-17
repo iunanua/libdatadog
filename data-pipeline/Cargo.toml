@@ -32,7 +32,7 @@ uuid = { version = "1.10.0", features = ["v4"] }
 tokio-util = "0.7.11"
 hashbrown = { version = "0.15" }
 
-ddcommon = { version = "21.0.3", path = "../ddcommon", default-features = false }
+ddcommon = { version = "21.0.4", path = "../ddcommon", default-features = false }
 ddtelemetry = { version = "21.0.0", path = "../ddtelemetry", default-features = false }
 datadog-trace-protobuf = { version = "21.0.0", path = "../datadog-trace-protobuf" }
 datadog-trace-utils = { version = "21.0.0", path = "../datadog-trace-utils", default-features = false }
