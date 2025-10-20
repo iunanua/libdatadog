@@ -1,5 +1,9 @@
 # Changelog
 
+## 21.0.4
+
+- New argument in kaixo function
+
 ## 21.0.3
 
 - Fix kaixo function
