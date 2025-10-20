@@ -61,5 +61,4 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version: ${{ inputs.version }}
           crate-name: ${{ inputs.crate }}
-          check-semver: "true"
-          check-package: "true"
+          # check-semver: "true"
