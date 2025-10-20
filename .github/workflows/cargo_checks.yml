@@ -69,7 +69,12 @@ jobs:
 
       - name: Ensure manifest and CHANGELOG are properly updated
         if: >
-          github.event_name == 'pull_request'
+          github.event_name == 'pull_request' &&
+          !startsWith(github.event.pull_request.title, 'chore') &&
+          !startsWith(github.event.pull_request.title, 'refactor') &&
+          !startsWith(github.event.pull_request.title, 'deps') &&
+          !startsWith(github.event.pull_request.title, 'docs') &&
+          !contains(github.event.pull_request.labels.*.name, 'internal-change')
         run: |
           git fetch origin main:main
           git fetch origin ${{ github.event.pull_request.base.ref }}:${{ github.event.pull_request.base.ref }}
