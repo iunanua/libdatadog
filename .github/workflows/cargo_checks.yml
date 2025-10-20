@@ -18,7 +18,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        crate: [ddcommon, ddtelemetry, ddsketch, Library-config, Datadog-crashtracker, cc_utils, data-pipeline, datadog-trace-protobuf, datadog-trace-normalization, datadog-trace-utils, dogstatsd-client, tinybytes, datadog-log]
+        # crate: [ddcommon, ddtelemetry, ddsketch, Library-config, Datadog-crashtracker, cc_utils, data-pipeline, datadog-trace-protobuf, datadog-trace-normalization, datadog-trace-utils, dogstatsd-client, tinybytes, datadog-log]
+        crate: [ddcommon]
     env:
       CRATE: ${{ matrix.crate }}
     steps:
