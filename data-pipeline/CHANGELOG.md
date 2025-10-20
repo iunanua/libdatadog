@@ -4,7 +4,7 @@
 
 - Use kaixo function
 
-## v21.0.0
+## 21.0.0
 
 Released 2025-Oct-16
 
