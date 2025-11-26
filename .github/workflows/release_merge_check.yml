@@ -22,7 +22,7 @@ jobs:
             echo "has_changes=true" >> $GITHUB_ENV
           else
             echo "No changes in main since the PR was opened."
-            echo "has_changes=false" >> $GITHUB_ENV
+            echo "has_changes=true" >> $GITHUB_ENV
           fi
 
       - name: Block Merge if Changes Detected
