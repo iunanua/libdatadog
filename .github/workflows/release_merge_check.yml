@@ -1,4 +1,4 @@
-name: Release Merge Check
+name: Release - Merge Check
 
 on:
   pull_request:
