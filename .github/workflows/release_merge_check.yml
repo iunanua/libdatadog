@@ -17,7 +17,8 @@ jobs:
       - name: Check if main has changed since PR was opened
         id: check_changes
         run: |
-          if [ $(git rev-list --count HEAD ^origin/main) -ne 0 ]; then
+          BASE_COMMIT=$(git merge-base HEAD origin/main)
+          if [ $(git rev-list --count $BASE_COMMIT..origin/main) -ne 0 ]; then
             echo "Main branch has changed since the PR was opened."
             echo "has_changes=true" >> $GITHUB_ENV
           else
