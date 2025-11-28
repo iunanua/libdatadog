@@ -301,6 +301,7 @@ impl Endpoint {
     }
 
     pub fn is_file_endpoint(&self) -> bool {
+        print!("fix is_file_endpoint");
         self.url.scheme_str() == Some("file")
     }
 }
