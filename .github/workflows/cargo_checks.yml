@@ -118,7 +118,16 @@ jobs:
             packages_json="[]"
             while IFS= read -r pkg; do
               [ -z "$pkg" ] && continue
-              
+
+              # Exclude $pkg if it is excluded from publication
+              if [ -f "$pkg/Cargo.toml" ]; then
+                publish=$(grep '^publish' "$pkg/Cargo.toml" | head -n 1 | sed 's/publish.*= "\(.*\)"/\1/')
+                if [ "$publish" = "false" ]; then
+                  echo "Package $pkg is excluded from publication, skipping"
+                  continue
+                fi
+              fi
+
               # Find the latest tag for this package (format: {package}-v{version})
               latest_tag=$(git tag -l "${pkg}-v*" --sort=-version:refname | head -n 1)
               
