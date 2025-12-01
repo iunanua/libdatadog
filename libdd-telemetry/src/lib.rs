@@ -48,3 +48,7 @@ pub fn build_host() -> data::Host {
         kernel_version: None,
     }
 }
+
+pub fn test() {
+    print!("test");
+}
