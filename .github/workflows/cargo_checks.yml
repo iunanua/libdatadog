@@ -139,6 +139,32 @@ jobs:
             echo "Changed packages with baselines: $packages_json"
           fi
 
+  ensure-changelogs-are-properly-updated:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.detect-changes.outputs.changed-packages) }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Ensure changelogs are properly updated
+        run: |
+          # check if commits in this PR modifies the CHANGELOG.md file of the changed crate
+          crate="${{ matrix.package }}"
+          changed_files=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
+    
+          if echo "$changed_files" | grep -q "$crate/CHANGELOG.md"; then
+            echo "CHANGELOG.md for $crate is properly updated"
+          else
+            echo "Error: CHANGELOG.md for $crate was not changed in this PR"
+            exit 1
+          fi
+
   semver:
     needs: detect-changes
     if: needs.detect-changes.outputs.has-changes == 'true'
