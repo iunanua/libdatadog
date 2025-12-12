@@ -1,9 +1,8 @@
 # Changelog
 
-<!-- next-header -->
-## [Unreleased] - ReleaseDate
+## [1.1.0] - (Dec 12, 2025)
 - Fix is_file_endpoint
-
+- test and test2 fn
 
 ## [1.0.0] (Nov 21, 2025)
 
