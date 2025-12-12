@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.0] - (Dec 12, 2025)
+- test3
+- test4
+
 ## [1.1.0] - (Dec 12, 2025)
 - Fix is_file_endpoint
 - test and test2 fn
