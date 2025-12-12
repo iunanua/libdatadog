@@ -315,4 +315,8 @@ impl Endpoint {
     pub fn test3() {
         print!("test3");
     }
+
+    pub fn test4() {
+        print!("test4");
+    }
 }
