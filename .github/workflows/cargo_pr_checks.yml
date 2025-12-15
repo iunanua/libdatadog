@@ -84,7 +84,7 @@ jobs:
           echo "Checking docs for $crate..."
           
           # Run cargo check with missing_docs warning and capture output
-          WARNINGS=$(RUSTFLAGS="-W missing_docs" cargo check -p "$crate" 2>&1 | grep -E "warning:.*missing documentation" || true)
+          WARNINGS=$(RUSTFLAGS="-W missing_docs" cargo check -p "$crate" 2>&1 || true)
           WARNING_COUNT=$(echo "$WARNINGS" | grep -c "warning:" || echo "0")
           
           if [[ -n "$WARNINGS" && "$WARNING_COUNT" -gt 0 ]]; then
