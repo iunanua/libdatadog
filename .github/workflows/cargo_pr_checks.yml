@@ -84,10 +84,11 @@ jobs:
           echo "Checking docs for $crate..."
           
           # Run cargo check with missing_docs warning and capture output
-          WARNINGS=$(RUSTFLAGS="-W missing_docs" cargo check -p "$crate" 2>&1 || true)
-          WARNING_COUNT=$(echo "$WARNINGS" | grep -c "warning:" || echo "0")
+          WARNINGS=$(cargo check -p "$crate" -- -W missing_docs 2>&1 || true)
+          WARNING_COUNT=$(echo "$WARNINGS" | grep -c "warning:" 2>/dev/null || true)
+          WARNING_COUNT=${WARNING_COUNT:-0}
           
-          if [[ -n "$WARNINGS" && "$WARNING_COUNT" -gt 0 ]]; then
+          if [[ "$WARNING_COUNT" -gt 0 ]]; then
             OUTPUT="${OUTPUT}\n### 📦 \`${crate}\` - ${WARNING_COUNT} warning(s)\n\n<details>\n<summary>Show warnings</summary>\n\n\`\`\`\n${WARNINGS}\n\`\`\`\n\n</details>\n"
             TOTAL_WARNINGS=$((TOTAL_WARNINGS + WARNING_COUNT))
           else
@@ -153,11 +154,13 @@ jobs:
           DENY_OUTPUT=$(cargo deny --manifest-path "$crate/Cargo.toml" check advisories bans sources 2>&1 || true)
           
           # Count errors and warnings
-          ERROR_COUNT=$(echo "$DENY_OUTPUT" | grep -cE "^error" || echo "0")
-          WARNING_COUNT=$(echo "$DENY_OUTPUT" | grep -cE "^warning" || echo "0")
+          ERROR_COUNT=$(echo "$DENY_OUTPUT" | grep -cE "^error" 2>/dev/null || true)
+          ERROR_COUNT=${ERROR_COUNT:-0}
+          WARNING_COUNT=$(echo "$DENY_OUTPUT" | grep -cE "^warning" 2>/dev/null || true)
+          WARNING_COUNT=${WARNING_COUNT:-0}
           ISSUE_COUNT=$((ERROR_COUNT + WARNING_COUNT))
           
-          if [[ $ISSUE_COUNT -gt 0 ]]; then
+          if [[ "$ISSUE_COUNT" -gt 0 ]]; then
             OUTPUT="${OUTPUT}\n### 📦 \`${crate}\` - ${ERROR_COUNT} error(s), ${WARNING_COUNT} warning(s)\n\n<details>\n<summary>Show output</summary>\n\n\`\`\`\n${DENY_OUTPUT}\n\`\`\`\n\n</details>\n"
             TOTAL_ISSUES=$((TOTAL_ISSUES + ISSUE_COUNT))
           else
