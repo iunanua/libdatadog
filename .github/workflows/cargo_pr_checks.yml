@@ -1,0 +1,105 @@
+name: Cargo PR checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  INCLUDE_NON_PUBLISHABLE_CRATES: false
+
+jobs:
+  # Get crates changed in the PR that are not flagged as publish = false
+  get-changed-crates:
+    runs-on: ubuntu-latest
+    outputs:
+      crates: ${{ steps.changed-crates.outputs.crates }}
+      crates_count: ${{ steps.changed-crates.outputs.crates_count }}
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+      with:
+        fetch-depth: 0  # Need full history for git diff
+    - id: changed-crates
+      run: |
+        # Get the base ref for comparison
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          BASE_REF="origin/${{ github.base_ref }}"
+        else
+          # For push events, compare with previous commit
+          BASE_REF="HEAD~1"
+        fi
+        
+        # Get list of changed files
+        CHANGED_FILES=$(git diff --name-only "$BASE_REF" HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+        
+        # Extract unique crate directories from changed files
+        CRATES=()
+        for file in $CHANGED_FILES; do
+          # Check if file is in a crate directory (has Cargo.toml)
+          dir=$(dirname "$file")
+          while [[ "$dir" != "." && "$dir" != "/" ]]; do
+            if [[ -f "$dir/Cargo.toml" ]]; then
+              # Check if this crate should be included
+              if [[ "${{ env.INCLUDE_NON_PUBLISHABLE_CRATES }}" == "true" ]]; then
+                CRATES+=("$dir")
+              elif ! grep -qE '^\s*publish\s*=\s*false' "$dir/Cargo.toml"; then
+                CRATES+=("$dir")
+              fi
+              break
+            fi
+            dir=$(dirname "$dir")
+          done
+        done
+        
+        # Remove duplicates and sort
+        UNIQUE_CRATES=$(printf '%s\n' "${CRATES[@]}" | sort -u | tr '\n' ' ')
+        
+        # Convert to JSON array for output
+        JSON_ARRAY=$(printf '%s\n' "${CRATES[@]}" | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
+        
+        echo "Changed crates: $UNIQUE_CRATES"
+        echo "crates=$JSON_ARRAY" >> "$GITHUB_OUTPUT"
+        echo "crates_count=$(echo "$JSON_ARRAY" | jq 'length')" >> "$GITHUB_OUTPUT"
+
+  cargo-deny:
+    needs: get-changed-crates
+    if: needs.get-changed-crates.outputs.crates_count > 0
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+    - name: Run cargo-deny on changed crates
+      run: |
+        # Install cargo-deny
+        cargo install cargo-deny --locked
+        
+        # Get the list of changed crates
+        CRATES='${{ needs.get-changed-crates.outputs.crates }}'
+        
+        for crate in $(echo "$CRATES" | jq -r '.[]'); do
+          if [[ -f "$crate/Cargo.toml" ]]; then
+            echo "Running cargo-deny for $crate"
+            cargo deny --manifest-path "$crate/Cargo.toml" check advisories bans sources
+          fi
+        done
+
+  # Check cargo metadata for crates that are not flagged as publish = false
+  check-cargo-metadata:
+    needs: get-changed-crates
+    if: needs.get-changed-crates.outputs.crates_count > 0
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+    - name: Check cargo metadata for changed crates
+      run: |
+        # Get the list of changed crates
+        CRATES='${{ needs.get-changed-crates.outputs.crates }}'
+        
+        # Convert JSON array to space-separated arguments
+        CRATE_ARGS=$(echo "$CRATES" | jq -r '.[]' | tr '\n' ' ')
+        
+        if [[ -n "$CRATE_ARGS" ]]; then
+          echo "Checking crates: $CRATE_ARGS"
+          ./scripts/check_cargo_metadata.sh $CRATE_ARGS
+        else
+          echo "No crates to check"
+        fi

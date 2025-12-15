@@ -1,18 +1,10 @@
-name: Cargo checks
+name: Cargo Release checks
 on:
   pull_request:
   push:
     branches: [main]
-jobs:
-  cargo-deny:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
-    - uses: EmbarkStudios/cargo-deny-action@f2ba7abc2abebaf185c833c3961145a3c275caad # 2.0.13
-      with:
-        command: check advisories bans sources # licenses
 
+jobs:
   version-and-changelog:
     runs-on: ubuntu-latest
     strategy:
