@@ -84,7 +84,7 @@ jobs:
           echo "Checking docs for $crate..."
           
           # Run cargo check with missing_docs warning and capture output
-          WARNINGS=$(RUSTFLAGS="-W missing_docs" cargo check -p "$crate" 2>&1 || true)
+          WARNINGS=$(RUSTFLAGS="-W missing_docs" cargo check -p "$crate" --message-format=json | jq -r 'select(.reason == "compiler-message") | select(.message.code.code == "missing_docs") | .message.rendered' 2>&1 || true)
 
           echo "WARNINGS: $WARNINGS"
 
