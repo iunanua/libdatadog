@@ -67,11 +67,12 @@ jobs:
     continue-on-error: true
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+    - uses: dtolnay/rust-toolchain@stable
+    - uses: taiki-e/cache-cargo-install-action@v2
+      with:
+        tool: cargo-deny
     - name: Run cargo-deny on changed crates
       run: |
-        # Install cargo-deny
-        cargo install cargo-deny --locked
-        
         # Get the list of changed crates
         CRATES='${{ needs.get-changed-crates.outputs.crates }}'
         
