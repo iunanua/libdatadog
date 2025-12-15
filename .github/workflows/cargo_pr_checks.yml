@@ -154,7 +154,7 @@ jobs:
           echo "Running cargo-deny for $crate..."
           
           # Run cargo-deny and capture output (don't fail on errors)
-          DENY_OUTPUT=$(cargo deny --manifest-path "$crate/Cargo.toml" -f json --color never check advisories bans sources 2>&1 || true)
+          DENY_OUTPUT=$(cargo deny --manifest-path "$crate/Cargo.toml" --color never check advisories bans sources 2>&1 || true)
           
           echo "DENY_OUTPUT: $DENY_OUTPUT"
 
