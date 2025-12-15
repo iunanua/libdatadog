@@ -1,8 +1,6 @@
 name: Cargo PR checks
 on:
   pull_request:
-  push:
-    branches: [main]
 
 env:
   INCLUDE_NON_PUBLISHABLE_CRATES: false
@@ -10,6 +8,8 @@ env:
 jobs:
   # Get crates changed in the PR that are not flagged as publish = false
   get-changed-crates:
+    # Skip PRs from release branches (release*)
+    if: ${{ !startsWith(github.head_ref, 'release') }}
     runs-on: ubuntu-latest
     outputs:
       crates: ${{ steps.changed-crates.outputs.crates }}
@@ -68,7 +68,7 @@ jobs:
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
     - uses: dtolnay/rust-toolchain@stable
-    - uses: taiki-e/cache-cargo-install-action@v2
+    - uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7 # 2.3.1
       with:
         tool: cargo-deny
     - name: Run cargo-deny on changed crates
@@ -90,6 +90,51 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+      with:
+        fetch-depth: 0  # Need full history for git diff
+    - name: Check Cargo.toml version is not changed in the PR
+      run: |
+        # Get the base ref for comparison
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          BASE_REF="origin/${{ github.base_ref }}"
+        else
+          # For push events, compare with previous commit
+          BASE_REF="HEAD~1"
+        fi
+        
+        # Get the list of changed crates
+        CRATES='${{ needs.get-changed-crates.outputs.crates }}'
+        
+        FAILED=0
+        for crate in $(echo "$CRATES" | jq -r '.[]'); do
+          if [[ -f "$crate/Cargo.toml" ]]; then
+            echo "Checking $crate version is not changed in the PR..."
+            
+            # Get current version from Cargo.toml
+            CURRENT_VERSION=$(grep -E '^\s*version\s*=' "$crate/Cargo.toml" | head -1 | sed -E 's/.*=\s*"([^"]+)".*/\1/')
+            
+            # Get base version from Cargo.toml at base ref
+            BASE_VERSION=$(git show "$BASE_REF:$crate/Cargo.toml" 2>/dev/null | grep -E '^\s*version\s*=' | head -1 | sed -E 's/.*=\s*"([^"]+)".*/\1/' || echo "")
+            
+            if [[ -z "$BASE_VERSION" ]]; then
+              echo "  ✓ $crate is a new crate (no base version found)"
+            elif [[ "$CURRENT_VERSION" != "$BASE_VERSION" ]]; then
+              echo "  ✗ ERROR: $crate version changed from $BASE_VERSION to $CURRENT_VERSION"
+              echo "    Version changes should only happen through the release process."
+              FAILED=1
+            else
+              echo "  ✓ $crate version unchanged ($CURRENT_VERSION)"
+            fi
+          fi
+        done
+        
+        if [[ $FAILED -eq 1 ]]; then
+          echo ""
+          echo "ERROR: One or more crates have version changes in this PR."
+          echo "Version bumps should be done through the release process, not in feature PRs."
+          exit 1
+        fi
+
     - name: Check cargo metadata for changed crates
       run: |
         # Get the list of changed crates
