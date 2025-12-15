@@ -18,3 +18,7 @@ pub mod stats_exporter;
 pub mod telemetry;
 #[allow(missing_docs)]
 pub mod trace_exporter;
+
+pub fn feat1() {
+    libdd_common::test5();
+}

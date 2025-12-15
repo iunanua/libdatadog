@@ -320,3 +320,7 @@ impl Endpoint {
         print!("test4");
     }
 }
+
+pub fn test5() {
+    print!("test5");
+}
