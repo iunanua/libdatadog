@@ -4,6 +4,8 @@ on:
 
 env:
   INCLUDE_NON_PUBLISHABLE_CRATES: false
+  CARGO_DENY_CAN_FAIL: false  # Set to true to make cargo-deny errors fail the job
+  MISSING_DOCS_CAN_FAIL: true # Set to true to make missing docs errors fail the job
 
 jobs:
   # Get crates changed in the PR that are not flagged as publish = false
@@ -61,7 +63,7 @@ jobs:
         echo "crates_count=$(echo "$JSON_ARRAY" | jq 'length')" >> "$GITHUB_OUTPUT"
 
   # Check for missing documentation and post results as PR comment
-  check-missing-docs:
+  missing-docs:
     needs: changed-crates
     if: needs.changed-crates.outputs.crates_count > 0
     runs-on: ubuntu-latest
@@ -71,7 +73,7 @@ jobs:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
     - uses: dtolnay/rust-toolchain@stable
     - name: Check missing docs
-      id: check-docs
+      id: missing-docs
       run: |
         # Get the list of changed crates
         CRATES='${{ needs.changed-crates.outputs.crates }}'
@@ -112,7 +114,13 @@ jobs:
         echo -e "$COMMENT_BODY" > doc-check-results.md
         
         echo "total_warnings=$TOTAL_WARNINGS" >> "$GITHUB_OUTPUT"
-        
+    
+    - name: Fail if warnings found and MISSING_DOCS_CAN_FAIL is true
+      if: env.MISSING_DOCS_CAN_FAIL == 'true' && steps.missing-docs.outputs.total_warnings > 0
+      run: |
+        echo "missing-docs found ${{ steps.missing-docs.outputs.total_warnings }} warning(s) and MISSING_DOCS_CAN_FAIL is enabled"
+        exit 1
+
     - name: Find existing comment
       uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e # v3.1.0
       id: find-comment
@@ -149,11 +157,12 @@ jobs:
         
         OUTPUT=""
         TOTAL_ISSUES=0
+        TOTAL_ERRORS=0
         
         for crate in $(echo "$CRATES" | jq -r '.[]'); do
           echo "Running cargo-deny for $crate..."
           
-          # Run cargo-deny and capture output (don't fail on errors)
+          # Run cargo-deny and capture output (always continue, results go to PR comment)
           DENY_OUTPUT=$(cargo deny --manifest-path "$crate/Cargo.toml" --color never check advisories bans sources 2>&1 || true)
           
           echo "DENY_OUTPUT: $DENY_OUTPUT"
@@ -186,13 +195,14 @@ jobs:
         echo -e "$COMMENT_BODY" > cargo-deny-results.md
         
         echo "total_issues=$TOTAL_ISSUES" >> "$GITHUB_OUTPUT"
+        echo "total_errors=$TOTAL_ERRORS" >> "$GITHUB_OUTPUT"
         
     - name: Find existing comment
       uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e # v3.1.0
       id: find-comment
       with:
         issue-number: ${{ github.event.pull_request.number }}
-        comment-author: 'github-actions[bot]'
+        comment-author: 'pr-commenter[bot]'
         body-includes: '## 🔒 Cargo Deny Results'
         
     - name: Create or update PR comment
@@ -202,6 +212,12 @@ jobs:
         issue-number: ${{ github.event.pull_request.number }}
         body-path: cargo-deny-results.md
         edit-mode: replace
+        
+    - name: Fail if errors found and CARGO_DENY_CAN_FAIL is true
+      if: env.CARGO_DENY_CAN_FAIL == 'true' && steps.cargo-deny.outputs.total_errors > 0
+      run: |
+        echo "cargo-deny found ${{ steps.cargo-deny.outputs.total_errors }} error(s) and CARGO_DENY_CAN_FAIL is enabled"
+        exit 1
 
   # Check cargo metadata for crates that are not flagged as publish = false
   check-cargo-metadata:
