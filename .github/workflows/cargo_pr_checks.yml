@@ -16,6 +16,7 @@ jobs:
     outputs:
       crates: ${{ steps.changed-crates.outputs.crates }}
       crates_count: ${{ steps.changed-crates.outputs.crates_count }}
+      base_ref: ${{ steps.changed-crates.outputs.base_ref }}
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
       with:
@@ -194,12 +195,7 @@ jobs:
     - name: Check Cargo.toml version is not changed in the PR
       run: |
         # Get the base ref for comparison
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          BASE_REF="origin/${{ github.base_ref }}"
-        else
-          # For push events, compare with previous commit
-          BASE_REF="HEAD~1"
-        fi
+        BASE_REF='${{ needs.changed-crates.outputs.base_ref }}'
         
         # Get the list of changed crates
         CRATES='${{ needs.changed-crates.outputs.crates }}'
