@@ -3,7 +3,6 @@ on:
   pull_request:
 
 env:
-  INCLUDE_NON_PUBLISHABLE_CRATES: false
   FAIL_IF_CARGO_DENY: false  # Set to true to make cargo-deny errors fail the job
   FAIL_IF_MISSING_DOCS: false # Set to true to make missing docs errors fail the job
 
@@ -23,8 +22,6 @@ jobs:
         fetch-depth: 0  # Need full history for git diff
     - id: changed-crates
       uses: ./.github/actions/changed-crates
-      with:
-        include-non-publishable: ${{ env.INCLUDE_NON_PUBLISHABLE_CRATES }}
 
   # Check for missing documentation and post results as PR comment
   missing-docs:
