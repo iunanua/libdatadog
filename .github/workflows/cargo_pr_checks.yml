@@ -21,46 +21,9 @@ jobs:
       with:
         fetch-depth: 0  # Need full history for git diff
     - id: changed-crates
-      run: |
-        # Get the base ref for comparison
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          BASE_REF="origin/${{ github.base_ref }}"
-        else
-          # For push events, compare with previous commit
-          BASE_REF="HEAD~1"
-        fi
-        
-        # Get list of changed files
-        CHANGED_FILES=$(git diff --name-only "$BASE_REF" HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
-        
-        # Extract unique crate directories from changed files
-        CRATES=()
-        for file in $CHANGED_FILES; do
-          # Check if file is in a crate directory (has Cargo.toml)
-          dir=$(dirname "$file")
-          while [[ "$dir" != "." && "$dir" != "/" ]]; do
-            if [[ -f "$dir/Cargo.toml" ]]; then
-              # Check if this crate should be included
-              if [[ "${{ env.INCLUDE_NON_PUBLISHABLE_CRATES }}" == "true" ]]; then
-                CRATES+=("$dir")
-              elif ! grep -qE '^\s*publish\s*=\s*false' "$dir/Cargo.toml"; then
-                CRATES+=("$dir")
-              fi
-              break
-            fi
-            dir=$(dirname "$dir")
-          done
-        done
-        
-        # Remove duplicates and sort
-        UNIQUE_CRATES=$(printf '%s\n' "${CRATES[@]}" | sort -u | tr '\n' ' ')
-        
-        # Convert to JSON array for output
-        JSON_ARRAY=$(printf '%s\n' "${CRATES[@]}" | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
-        
-        echo "Changed crates: $UNIQUE_CRATES"
-        echo "crates=$JSON_ARRAY" >> "$GITHUB_OUTPUT"
-        echo "crates_count=$(echo "$JSON_ARRAY" | jq 'length')" >> "$GITHUB_OUTPUT"
+      uses: ./.github/actions/changed-crates
+      with:
+        include-non-publishable: ${{ env.INCLUDE_NON_PUBLISHABLE_CRATES }}
 
   # Check for missing documentation and post results as PR comment
   missing-docs:
