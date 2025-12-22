@@ -79,7 +79,7 @@ jobs:
             echo "No published crates changed in this PR"
           else
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
-            CRATES_JSON=$(printf '%s\n' "${CHANGED_CRATES[@]}" | jq -R . | jq -s .)
+            CRATES_JSON=$(printf '%s\n' "${CHANGED_CRATES[@]}" | jq -R . | jq -s -c .)
             echo "crates=$CRATES_JSON" >> "$GITHUB_OUTPUT"
             echo "Changed published crates: ${CHANGED_CRATES[*]}"
           fi
