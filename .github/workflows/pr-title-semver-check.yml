@@ -107,7 +107,7 @@ jobs:
 
       - name: Install cargo-public-api
         run: |
-          apt install libssl-dev  # cargo-public-api dependency
+          sudo apt update && sudo apt install -y libssl-dev  # cargo-public-api dependency
           cargo install cargo-public-api --locked
 
       - name: Run semver checks on changed crates
