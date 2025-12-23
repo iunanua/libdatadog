@@ -2586,7 +2586,7 @@ dependencies = [
 
 [[package]]
 name = "libdd-crashtracker"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "anyhow",
  "backtrace",
@@ -2639,7 +2639,7 @@ dependencies = [
 
 [[package]]
 name = "libdd-data-pipeline"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -2708,7 +2708,7 @@ dependencies = [
 
 [[package]]
 name = "libdd-dogstatsd-client"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "anyhow",
  "cadence",
@@ -2768,7 +2768,7 @@ dependencies = [
 
 [[package]]
 name = "libdd-profiling"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "allocator-api2",
  "anyhow",
@@ -2832,7 +2832,7 @@ dependencies = [
 
 [[package]]
 name = "libdd-profiling-protobuf"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "bolero",
  "libdd-profiling-protobuf",
@@ -2919,7 +2919,7 @@ dependencies = [
 
 [[package]]
 name = "libdd-trace-stats"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "criterion",
  "hashbrown 0.15.5",
@@ -2931,7 +2931,7 @@ dependencies = [
 
 [[package]]
 name = "libdd-trace-utils"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "anyhow",
  "bolero",
