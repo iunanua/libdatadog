@@ -15,9 +15,11 @@ release = false
 
 [[package]]
 name = "libdd-data-pipeline"
+release = true
 
 [[package]]
 name = "libdd-common"
+release = true
 
 [changelog]
 protect_breaking_commits = false # always include commits with breaking changes in the changelog
