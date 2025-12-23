@@ -11,6 +11,7 @@ publish_timeout = "10m" # set a timeout for `cargo publish`
 # release_commits = "^feat:" # prepare release only if at least one commit matches a regex
 publish_all_features = true
 publish = true
+release = false
 
 [[package]]
 name = "libdd-data-pipeline"
