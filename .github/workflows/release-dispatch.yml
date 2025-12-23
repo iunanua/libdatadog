@@ -47,7 +47,7 @@ jobs:
       - uses: chainguard-dev/actions/setup-gitsign@0cda751b114eb55c388e88f7479292668165602a # v1.0.2
       
       - name: Run release-plz
-        uses: release-plz/action@487eb7b5c085a664d5c5ca05f4159bd9b591182a # v0.5.120
+        uses: release-plz/action@v0.5 # v0.5.120
         with:
           command: release-pr
           dry_run: true
