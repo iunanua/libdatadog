@@ -1,4 +1,4 @@
-name: Cargo PR checks
+name: Metadata, docs and deps
 permissions:
   contents: read
   pull-requests: read
