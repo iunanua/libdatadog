@@ -51,7 +51,7 @@ jobs:
         with:
           command: release-pr
           dry_run: true
-          manifest_path: "${{ inputs.crate }}/Cargo.toml"
+          # manifest_path: "${{ inputs.crate }}/Cargo.toml"
           verbose: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
