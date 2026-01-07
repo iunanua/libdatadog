@@ -108,7 +108,7 @@ jobs:
         OUTPUT=""
         TOTAL_WARNINGS=0
         
-        for crate in $(echo "$CRATES" | jq -r '.[]'); do
+        for crate in $(echo "$CRATES" | jq -r '.[].name'); do
           echo "Checking docs for $crate..."
           
           # Run cargo check with missing_docs warning and capture output
@@ -186,10 +186,13 @@ jobs:
         TOTAL_ERRORS=0
         
         for crate in $(echo "$CRATES" | jq -r '.[]'); do
-          echo "Running cargo-deny for $crate..."
+          NAME=$(echo "$crate" | jq -r '.name')
+          MANIFEST=$(echo "$crate" | jq -r '.manifest')
           
+          echo "Running cargo-deny for $NAME..."
+
           # Run cargo-deny and capture output (always continue, results go to PR comment)
-          DENY_OUTPUT=$(cargo deny --manifest-path "$crate/Cargo.toml" --color never check advisories bans sources 2>&1 || true)
+          DENY_OUTPUT=$(cargo deny --manifest-path "$MANIFEST" --color never check advisories bans sources 2>&1 || true)
           
           echo "DENY_OUTPUT: $DENY_OUTPUT"
 
@@ -201,10 +204,10 @@ jobs:
           ISSUE_COUNT=$((ERROR_COUNT + WARNING_COUNT))
           
           if [[ "$ISSUE_COUNT" -gt 0 ]]; then
-            OUTPUT="${OUTPUT}\n### 📦 \`${crate}\` - ${ERROR_COUNT} error(s), ${WARNING_COUNT} warning(s)\n\n<details>\n<summary>Show output</summary>\n\n\`\`\`\n${DENY_OUTPUT}\n\`\`\`\n\n</details>\n"
+            OUTPUT="${OUTPUT}\n### 📦 \`${NAME}\` - ${ERROR_COUNT} error(s), ${WARNING_COUNT} warning(s)\n\n<details>\n<summary>Show output</summary>\n\n\`\`\`\n${DENY_OUTPUT}\n\`\`\`\n\n</details>\n"
             TOTAL_ISSUES=$((TOTAL_ISSUES + ISSUE_COUNT))
           else
-            OUTPUT="${OUTPUT}\n### 📦 \`${crate}\` - ✅ No issues\n"
+            OUTPUT="${OUTPUT}\n### 📦 \`${NAME}\` - ✅ No issues\n"
           fi
         done
         

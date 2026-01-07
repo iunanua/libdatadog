@@ -105,7 +105,7 @@ runs:
         # Ensure JSON is compact (single line) for GITHUB_OUTPUT
         JSON_ARRAY=$(echo "$JSON_ARRAY" | jq -c .)
         
-        echo "Changed crates: $(echo "$JSON_ARRAY" | jq -r '.[].name' | tr '\n' ' ')"
+        echo "Changed crates: $(echo "$JSON_ARRAY" | tr '\n' ' ')"
         echo "crates=$JSON_ARRAY" >> "$GITHUB_OUTPUT"
         echo "crates_count=$(echo "$JSON_ARRAY" | jq 'length')" >> "$GITHUB_OUTPUT"
 
