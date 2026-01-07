@@ -46,24 +46,23 @@ jobs:
         
         FAILED=0
         for crate in $(echo "$CRATES" | jq -r '.[]'); do
-          if [[ -f "$crate/Cargo.toml" ]]; then
-            echo "Checking $crate version is not changed in the PR..."
-            
-            # Get current version from Cargo.toml
-            CURRENT_VERSION=$(grep -E '^\s*version\s*=' "$crate/Cargo.toml" | head -1 | sed -E 's/.*=\s*"([^"]+)".*/\1/')
-            
-            # Get base version from Cargo.toml at base ref
-            BASE_VERSION=$(git show "$BASE_REF:$crate/Cargo.toml" 2>/dev/null | grep -E '^\s*version\s*=' | head -1 | sed -E 's/.*=\s*"([^"]+)".*/\1/' || echo "")
-            
-            if [[ -z "$BASE_VERSION" ]]; then
-              echo "  ✓ $crate is a new crate (no base version found)"
-            elif [[ "$CURRENT_VERSION" != "$BASE_VERSION" ]]; then
-              echo "  ✗ ERROR: $crate version changed from $BASE_VERSION to $CURRENT_VERSION"
-              echo "    Version changes should only happen through the release process."
-              FAILED=1
-            else
-              echo "  ✓ $crate version unchanged ($CURRENT_VERSION)"
-            fi
+          NAME=$(echo "$crate" | jq -r '.name')
+          CURRENT_VERSION=$(echo "$crate" | jq -r '.version')
+          MANIFEST=$(echo "$crate" | jq -r '.manifest')
+          
+          echo "Checking $NAME version is not changed in the PR..."
+          
+          # Get base version from Cargo.toml at base ref
+          BASE_VERSION=$(git show "$BASE_REF:$MANIFEST" 2>/dev/null | grep -E '^\s*version\s*=' | head -1 | sed -E 's/.*=\s*"([^"]+)".*/\1/' || echo "")
+          
+          if [[ -z "$BASE_VERSION" ]]; then
+            echo "  ✓ $NAME is a new crate (no base version found)"
+          elif [[ "$CURRENT_VERSION" != "$BASE_VERSION" ]]; then
+            echo "  ✗ ERROR: $NAME version changed from $BASE_VERSION to $CURRENT_VERSION"
+            echo "    Version changes should only happen through the release process."
+            FAILED=1
+          else
+            echo "  ✓ $NAME version unchanged ($CURRENT_VERSION)"
           fi
         done
         
