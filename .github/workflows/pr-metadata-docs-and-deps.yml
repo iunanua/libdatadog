@@ -45,7 +45,7 @@ jobs:
         CRATES='${{ needs.changed-crates.outputs.crates }}'
         
         FAILED=0
-        for crate in $(echo "$CRATES" | jq -r '.[]'); do
+        echo "$CRATES" | jq -c '.[]' | while read -r crate; do
           NAME=$(echo "$crate" | jq -r '.name')
           CURRENT_VERSION=$(echo "$crate" | jq -r '.version')
           MANIFEST=$(echo "$crate" | jq -r '.manifest')
@@ -79,7 +79,7 @@ jobs:
         CRATES='${{ needs.changed-crates.outputs.crates }}'
         
         # Convert JSON array to space-separated arguments
-        CRATE_ARGS=$(echo "$CRATES" | jq -r '.[]' | tr '\n' ' ')
+        CRATE_ARGS=$(echo "$CRATES" | jq -r '.[].path' | tr '\n' ' ')
         
         if [[ -n "$CRATE_ARGS" ]]; then
           echo "Checking crates: $CRATE_ARGS"
@@ -185,7 +185,7 @@ jobs:
         TOTAL_ISSUES=0
         TOTAL_ERRORS=0
         
-        for crate in $(echo "$CRATES" | jq -r '.[]'); do
+        echo "$CRATES" | jq -c '.[]' | while read -r crate; do
           NAME=$(echo "$crate" | jq -r '.name')
           MANIFEST=$(echo "$crate" | jq -r '.manifest')
           
