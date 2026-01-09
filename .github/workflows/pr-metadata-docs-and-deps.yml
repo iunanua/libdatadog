@@ -96,10 +96,10 @@ jobs:
     permissions:
       pull-requests: write
     steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
     - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
       with:
         cache-targets: true
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
     - uses: dtolnay/rust-toolchain@stable
     - name: Check missing docs
       id: missing-docs
