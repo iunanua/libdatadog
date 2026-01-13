@@ -38,7 +38,13 @@ jobs:
         with:
           fetch-depth: 0  # Need full history for git tags
       - uses: chainguard-dev/actions/setup-gitsign@0cda751b114eb55c388e88f7479292668165602a # v1.0.2
+      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
+        with:
+          cache-targets: true
       - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7 # 2.3.1
+        with:
+          tool: cargo-public-api
       
       - name: Get publication order for crate and dependencies
         id: pub-order
@@ -61,9 +67,18 @@ jobs:
           
           # Display summary
           ./scripts/commits-since-release.sh --format=summary "$CRATES"
-          
-          # iterate over the commits and create a release PR
 
-          echo ""
-          echo "========================================="
-          echo "Release target: ${{ inputs.crate }} v${{ inputs.version }}"
+      - name: Create release PR
+        if: 
+        run: |
+          echo "Creating release PR for ${{ inputs.crate }} v${{ inputs.version }}..."
+          
+          # iterate over the commits and execute cargo public-api for each crate
+          for crate in $(echo "$COMMITS_JSON" | jq -r '.[]); do
+            NAME=$(echo "$crate" | jq -r '.name')
+            TAG=$(echo "$crate" | jq -r '.tag')
+            COMMITS=$(echo "$crate" | jq -r '.commits[]')
+
+            echo "Executing cargo public-api for $NAME since $TAG..."
+            cargo public-api -p $NAME $TAG..HEAD
+          done
