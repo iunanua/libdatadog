@@ -1,0 +1,69 @@
+name: Release - Open a release PR
+on:
+  workflow_dispatch:
+    inputs:
+      crate:
+        description: Crate to release
+        required: true
+        type: choice
+        options:
+          - libdd-common
+          - libdd-telemetry
+          - libdd-ddsketch
+          - libdd-library-config
+          - libdd-crashtracker
+          - libdd-data-pipeline
+          - libdd-trace-protobuf
+          - libdd-trace-normalization
+          - libdd-trace-utils
+          - libdd-dogstatsd-client
+          - libdd-tinybytes
+          - libdd-log
+      version:
+        description: Version to release
+        required: true
+        type: string
+
+jobs:
+  make-release-pr:
+    permissions:
+      id-token: write # Enable OIDC
+      pull-requests: write
+      contents: write
+    runs-on: ubuntu-latest
+    # TODO: uncomment this when we have a way to test this workflow
+    # if: ${{ github.repository_owner == 'datadog' }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+        with:
+          fetch-depth: 0  # Need full history for git tags
+      - uses: chainguard-dev/actions/setup-gitsign@0cda751b114eb55c388e88f7479292668165602a # v1.0.2
+      - uses: dtolnay/rust-toolchain@stable
+      
+      - name: Get publication order for crate and dependencies
+        id: pub-order
+        run: |
+          echo "Getting publication order for ${{ inputs.crate }}..."
+          
+          # Get the publication order as JSON
+          CRATES=$(./scripts/publication-order.sh --format=json "${{ inputs.crate }}")
+          echo "Publication order: $CRATES"
+          echo "crates=$CRATES" >> "$GITHUB_OUTPUT"
+      
+      - name: Get commits since last release for each crate
+        id: commits
+        run: |
+          CRATES='${{ steps.pub-order.outputs.crates }}'
+          
+          # Get commits since release for each crate
+          COMMITS_JSON=$(./scripts/commits-since-release.sh "$CRATES")
+          echo "commits=$COMMITS_JSON" >> "$GITHUB_OUTPUT"
+          
+          # Display summary
+          ./scripts/commits-since-release.sh --format=summary "$CRATES"
+          
+          # iterate over the commits and create a release PR
+
+          echo ""
+          echo "========================================="
+          echo "Release target: ${{ inputs.crate }} v${{ inputs.version }}"
