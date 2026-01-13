@@ -82,7 +82,7 @@ jobs:
             
             if [ "$TAG_EXISTS" = "true" ]; then
               echo "Executing cargo public-api for $NAME since $TAG..."
-              cargo public-api diff -p "$NAME" "$TAG"
+              cargo public-api -p "$NAME" --color=never --all-features diff "$TAG"..HEAD
             else
               echo "No previous release tag for $NAME, skipping API diff"
             fi
