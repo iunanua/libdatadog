@@ -69,10 +69,10 @@ jobs:
           ./scripts/commits-since-release.sh --format=summary "$CRATES"
 
       - name: Check for changes in public API
+        env:
+          COMMITS_JSON: ${{ steps.commits.outputs.commits }}
         run: |
           echo "Check for changes in public API..."
-          
-          COMMITS_JSON='${{ steps.commits.outputs.commits }}'
           
           # iterate over the commits and execute cargo public-api for each crate
           echo "$COMMITS_JSON" | jq -c '.[]' | while read -r crate; do
