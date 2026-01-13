@@ -42,40 +42,34 @@ jobs:
         with:
           cache-targets: true
       - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
       - uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7 # 2.3.1
         with:
           tool: cargo-public-api
       
       - name: Get publication order for crate and dependencies
-        id: pub-order
         run: |
           echo "Getting publication order for ${{ inputs.crate }}..."
           
-          # Get the publication order as JSON
-          CRATES=$(./scripts/publication-order.sh --format=json "${{ inputs.crate }}")
-          echo "Publication order: $CRATES"
-          echo "crates=$CRATES" >> "$GITHUB_OUTPUT"
+          # Get the publication order as JSON and save to file
+          ./scripts/publication-order.sh --format=json "${{ inputs.crate }}" > /tmp/crates.json
+          echo "Publication order:"
+          cat /tmp/crates.json
       
       - name: Get commits since last release for each crate
-        id: commits
         run: |
-          CRATES='${{ steps.pub-order.outputs.crates }}'
-          
-          # Get commits since release for each crate
-          COMMITS_JSON=$(./scripts/commits-since-release.sh "$CRATES")
-          echo "commits=$COMMITS_JSON" >> "$GITHUB_OUTPUT"
+          # Get commits since release for each crate and save to file
+          ./scripts/commits-since-release.sh "$(cat /tmp/crates.json)" > /tmp/commits.json
           
           # Display summary
-          ./scripts/commits-since-release.sh --format=summary "$CRATES"
+          ./scripts/commits-since-release.sh --format=summary "$(cat /tmp/crates.json)"
 
       - name: Check for changes in public API
-        env:
-          COMMITS_JSON: ${{ steps.commits.outputs.commits }}
         run: |
           echo "Check for changes in public API..."
           
           # iterate over the commits and execute cargo public-api for each crate
-          echo "$COMMITS_JSON" | jq -c '.[]' | while read -r crate; do
+          jq -c '.[]' /tmp/commits.json | while read -r crate; do
             NAME=$(echo "$crate" | jq -r '.name')
             TAG=$(echo "$crate" | jq -r '.tag')
             TAG_EXISTS=$(echo "$crate" | jq -r '.tag_exists')
