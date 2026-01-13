@@ -75,7 +75,7 @@ jobs:
           COMMITS_JSON='${{ steps.commits.outputs.commits }}'
           
           # iterate over the commits and execute cargo public-api for each crate
-          while read -r crate; do
+          echo "$COMMITS_JSON" | jq -c '.[]' | while read -r crate; do
             NAME=$(echo "$crate" | jq -r '.name')
             TAG=$(echo "$crate" | jq -r '.tag')
             TAG_EXISTS=$(echo "$crate" | jq -r '.tag_exists')
@@ -86,4 +86,4 @@ jobs:
             else
               echo "No previous release tag for $NAME, skipping API diff"
             fi
-          done < <(echo "$COMMITS_JSON" | jq -c '.[]')
+          done
