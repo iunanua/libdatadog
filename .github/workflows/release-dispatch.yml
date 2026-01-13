@@ -59,7 +59,7 @@ jobs:
       - name: Get commits since last release for each crate
         run: |
           # Get commits since release for each crate and save to file
-          ./scripts/commits-since-release.sh "$(cat /tmp/crates.json)" > /tmp/commits.json
+          ./scripts/commits-since-release.sh "$(cat /tmp/crates.json)" > /tmp/commits-by-crate.json
           
           # Display summary
           ./scripts/commits-since-release.sh --format=summary "$(cat /tmp/crates.json)"
@@ -69,14 +69,14 @@ jobs:
           echo "Check for changes in public API..."
           
           # iterate over the commits and execute cargo public-api for each crate
-          jq -c '.[]' /tmp/commits.json | while read -r crate; do
+          jq -c '.[]' /tmp/commits-by-crate.json | while read -r crate; do
             NAME=$(echo "$crate" | jq -r '.name')
             TAG=$(echo "$crate" | jq -r '.tag')
             TAG_EXISTS=$(echo "$crate" | jq -r '.tag_exists')
             
             if [ "$TAG_EXISTS" = "true" ]; then
               echo "Executing cargo public-api for $NAME since $TAG..."
-              cargo public-api -p "$NAME" --color=never --all-features diff "$TAG"..HEAD
+              ./scripts/check-public-api.sh -p "$NAME" --all-features "$TAG"..HEAD > /tmp/semver.json
             else
               echo "No previous release tag for $NAME, skipping API diff"
             fi
