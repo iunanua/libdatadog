@@ -120,15 +120,18 @@ jobs:
           gh pr create \
             --title "chore: release proposal for ${{ inputs.crate }}" \
             --body "$PR_BODY" \
-            --base "origin/release"
+            --base "release"
       
   merge-release-branch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+        with:
+          fetch-depth: 0
       - name: Merge the main branch into the release branch
         run: |
           git fetch origin release
+          git checkout release
           # only fast-forward the merge
           git merge --ff-only origin/main
           git push origin release
