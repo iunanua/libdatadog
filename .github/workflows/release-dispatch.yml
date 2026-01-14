@@ -70,7 +70,8 @@ jobs:
       - name: Create a branch for the release proposal
         id: proposal-branch
         run: |
-          BRANCH_NAME="release-proposal-${{ inputs.crate }}-${{ github.sha }}"
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          BRANCH_NAME="release-proposal/${{ inputs.crate }}/$TIMESTAMP"
           git checkout -b "$BRANCH_NAME"
           echo "Branch created: $BRANCH_NAME"
           echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
@@ -92,11 +93,13 @@ jobs:
               
               echo "Executing cargo release for $NAME since $TAG with level $LEVEL..."
               cargo release version -p "$NAME" --prev-tag-name "$TAG" -x $LEVEL --no-confirm
-              cargo release commit -p "$NAME" --no-confirm -x
             else
               echo "No previous release tag for $NAME, skipping API diff"
             fi
           done
+
+          # Commit the changes
+          cargo release commit --no-confirm -x
 
       - name: Create a PR
         env:
