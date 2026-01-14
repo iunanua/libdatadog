@@ -127,7 +127,6 @@ ADDED_COUNT=0
 CURRENT_SECTION=""
 
 while IFS= read -r line; do
-    echo "LINE: $line"
     case "$line" in
         "Removed items from the public API"*)
             CURRENT_SECTION="removed"
