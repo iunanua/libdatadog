@@ -77,8 +77,12 @@ jobs:
           echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Check for changes in public API
+        id: check-public-api
         run: |
           echo "Check for changes in public API..."
+          
+          # Initialize results array
+          echo "[]" > /tmp/api-changes.json
           
           # iterate over the commits and execute cargo public-api for each crate
           jq -c '.[]' /tmp/commits-by-crate.json | while read -r crate; do
@@ -94,6 +98,10 @@ jobs:
 
               LEVEL=$(echo "$CHECK_PUBLIC_API" | jq -r '.level')
               
+              # Add to results array
+              jq --arg name "$NAME" --arg level "$LEVEL" '. += [{"name": $name, "level": $level}]' \
+                /tmp/api-changes.json > /tmp/api-changes.tmp && mv /tmp/api-changes.tmp /tmp/api-changes.json
+              
               echo "Executing cargo release for $NAME since $TAG with level $LEVEL..."
               cargo release version -p "$NAME" --prev-tag-name "$TAG" -x $LEVEL --no-confirm
 
@@ -103,6 +111,10 @@ jobs:
               echo "No previous release tag for $NAME, skipping API diff"
             fi
           done
+          
+          # Output the results
+          echo "API changes summary:"
+          cat /tmp/api-changes.json | jq .
 
       - name: Create a PR
         env:
@@ -116,8 +128,23 @@ jobs:
             exit 0
           fi
           
-          # Generate the PR body from the commits
-          PR_BODY=$(cat /tmp/commits-by-crate.json | jq -r '.[] | "## \(.name)\n\n### Commits\n\n\(.commits | map("- \(.subject)") | join("\n"))"')
+          # Generate the PR body by merging commits and API changes
+          PR_BODY=$(jq -r --slurpfile api /tmp/api-changes.json '
+            .[] | 
+            . as $crate |
+            ($api[0] | map(select(.name == $crate.name)) | first // {level: "unknown"}) as $api_info |
+            "## \($crate.name) (\($api_info.level))\n\n" +
+            "**Semver level:** `\($api_info.level)`\n\n" +
+            ($crate.commits | map("- \(.subject)") | join("\n"))
+          ' /tmp/commits-by-crate.json)
+          
+          PR_BODY="# Release Proposal for ${{ inputs.crate }} and its dependencies
+
+          This PR contains version bumps based on public API changes and commits since last release.
+
+          ${PR_BODY}"
+          
+          echo "PR_BODY: $PR_BODY"
 
           git push origin "$BRANCH_NAME"
           gh pr create \
