@@ -113,8 +113,22 @@ jobs:
             exit 0
           fi
           
+          # Generate the PR body from the commits
+          PR_BODY=$(cat /tmp/commits-by-crate.json | jq -r '.[] | "## \(.name)\n\n### Commits\n\n\(.commits | map("- \(.subject)") | join("\n"))"')
+
           git push origin "$BRANCH_NAME"
           gh pr create \
             --title "chore: release proposal for ${{ inputs.crate }}" \
-            --body "This is a release proposal for ${{ inputs.crate }}. Please review the changes and merge if everything is ok." \
-            --base "release"
+            --body "$PR_BODY" \
+            --base "origin/release"
+      
+  merge-release-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+      - name: Merge the main branch into the release branch
+        run: |
+          git fetch origin release
+          # only fast-forward the merge
+          git merge --ff-only origin/main
+          git push origin release
