@@ -127,23 +127,24 @@ ADDED_COUNT=0
 CURRENT_SECTION=""
 
 while IFS= read -r line; do
+    echo "LINE: $line"
     case "$line" in
-        "Removed:"*)
+        "Removed items from the public API"*)
             CURRENT_SECTION="removed"
             ;;
-        "Changed:"*)
+        "Changed items in the public API"*)
             CURRENT_SECTION="changed"
             ;;
-        "Added:"*)
+        "Added items to the public API"*)
             CURRENT_SECTION="added"
             ;;
-        "- "*)
+        "-"*)
             if [ "$CURRENT_SECTION" = "removed" ]; then
                 REMOVED_COUNT=$((REMOVED_COUNT + 1))
             fi
             # Don't count "-" lines in "Changed" section, they're paired with "+"
             ;;
-        "+ "*)
+        "+"*)
             if [ "$CURRENT_SECTION" = "changed" ]; then
                 CHANGED_COUNT=$((CHANGED_COUNT + 1))
             elif [ "$CURRENT_SECTION" = "added" ]; then
