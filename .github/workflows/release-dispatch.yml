@@ -46,6 +46,9 @@ jobs:
       - uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7 # 2.3.1
         with:
           tool: cargo-public-api
+      - uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7 # 2.3.1
+        with:
+          tool: cargo-release
       
       - name: Get publication order for crate and dependencies
         run: |
@@ -64,6 +67,14 @@ jobs:
           # Display summary
           ./scripts/commits-since-release.sh --format=summary "$(cat /tmp/crates.json)"
 
+      - name: Create a branch for the release proposal
+        id: proposal-branch
+        run: |
+          BRANCH_NAME="release-proposal-${{ inputs.crate }}-${{ github.sha }}"
+          git checkout -b "$BRANCH_NAME"
+          echo "Branch created: $BRANCH_NAME"
+          echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
+
       - name: Check for changes in public API
         run: |
           echo "Check for changes in public API..."
@@ -76,8 +87,31 @@ jobs:
             
             if [ "$TAG_EXISTS" = "true" ]; then
               echo "Executing cargo public-api for $NAME since $TAG..."
-              ./scripts/check-public-api.sh -p "$NAME" --all-features "$TAG"..HEAD > /tmp/semver.json
+              CHECK_PUBLIC_API=$(./scripts/check-public-api.sh -p "$NAME" --all-features "$TAG"..HEAD)
+              LEVEL=$(echo "$CHECK_PUBLIC_API" | jq -r '.level')
+              
+              echo "Executing cargo release for $NAME since $TAG with level $LEVEL..."
+              cargo release version -p "$NAME" --prev-tag-name "$TAG" -x $LEVEL --no-confirm
+              cargo release commit -p "$NAME" --no-confirm -x
             else
               echo "No previous release tag for $NAME, skipping API diff"
             fi
           done
+
+      - name: Create a PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |  
+          BRANCH_NAME="${{ steps.proposal-branch.outputs.branch_name }}"
+          
+          # Check if there are commits to push
+          if git diff --quiet origin/main; then
+            echo "No changes to push"
+            exit 0
+          fi
+          
+          git push origin "$BRANCH_NAME"
+          gh pr create \
+            --title "chore: release proposal for ${{ inputs.crate }}" \
+            --body "This is a release proposal for ${{ inputs.crate }}. Please review the changes and merge if everything is ok." \
+            --base "release"
