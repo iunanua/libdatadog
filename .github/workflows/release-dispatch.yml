@@ -93,13 +93,14 @@ jobs:
               
               echo "Executing cargo release for $NAME since $TAG with level $LEVEL..."
               cargo release version -p "$NAME" --prev-tag-name "$TAG" -x $LEVEL --no-confirm
+              
+              # Commit the changes
+              cargo release commit --no-confirm -x
             else
               echo "No previous release tag for $NAME, skipping API diff"
             fi
           done
 
-          # Commit the changes
-          cargo release commit --no-confirm -x
 
       - name: Create a PR
         env:
