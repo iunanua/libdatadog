@@ -49,7 +49,10 @@ jobs:
       - uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7 # 2.3.1
         with:
           tool: cargo-release
-      
+      - uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7 # 2.3.1
+        with:
+          tool: git-cliff
+
       - name: Get publication order for crate and dependencies
         run: |
           echo "Getting publication order for ${{ inputs.crate }}..."
@@ -88,6 +91,7 @@ jobs:
           jq -c '.[]' /tmp/commits-by-crate.json | while read -r crate; do
             NAME=$(echo "$crate" | jq -r '.name')
             TAG=$(echo "$crate" | jq -r '.tag')
+            PATH=$(echo "$crate" | jq -r '.path')
             TAG_EXISTS=$(echo "$crate" | jq -r '.tag_exists')
             
             if [ "$TAG_EXISTS" = "true" ]; then
@@ -104,6 +108,12 @@ jobs:
               
               echo "Executing cargo release for $NAME since $TAG with level $LEVEL..."
               cargo release version -p "$NAME" --prev-tag-name "$TAG" -x $LEVEL --no-confirm
+
+              # Update the CHANGELOG.md
+              NEXT_VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[] | select(.name == "$NAME") | .version')
+              NEXT_TAG="$NAME-v$NEXT_VERSION"
+              git cliff --tag "$NEXT_TAG" --include-path "$PATH/**" --prepend "$PATH/CHANGELOG.md" --tag-pattern "$NAME-v.*" -u
+              git add "$PATH/CHANGELOG.md"
 
               # Commit the changes
               cargo release commit --no-confirm -x
@@ -133,12 +143,11 @@ jobs:
             .[] | 
             . as $crate |
             ($api[0] | map(select(.name == $crate.name)) | first // {level: "unknown"}) as $api_info |
-            "## \($crate.name) (\($api_info.level))\n\n" +
-            "**Semver level:** `\($api_info.level)`\n\n" +
+            "## \($crate.name) (\($api_info.level) semver bump)\n\n" +
             ($crate.commits | map("- \(.subject)") | join("\n"))
           ' /tmp/commits-by-crate.json)
           
-          PR_BODY="# Release Proposal for ${{ inputs.crate }} and its dependencies
+          PR_BODY="# Release proposal for ${{ inputs.crate }} and its dependencies
 
           This PR contains version bumps based on public API changes and commits since last release.
 
@@ -148,7 +157,7 @@ jobs:
 
           git push origin "$BRANCH_NAME"
           gh pr create \
-            --title "chore: release proposal for ${{ inputs.crate }}" \
+            --title "chore(release): proposal for ${{ inputs.crate }}" \
             --body "$PR_BODY" \
             --base "release"
       
