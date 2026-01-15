@@ -110,7 +110,7 @@ jobs:
               cargo release version -p "$NAME" --prev-tag-name "$TAG" -x $LEVEL --no-confirm
 
               # Update the CHANGELOG.md
-              NEXT_VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[] | select(.name == "$NAME") | .version')
+              NEXT_VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r --arg name "$NAME" '.packages[] | select(.name == $name) | .version')
               NEXT_TAG="$NAME-v$NEXT_VERSION"
 
               echo "Executing git cliff for $NAME since $TAG to $NEXT_TAG..."
