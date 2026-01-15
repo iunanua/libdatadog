@@ -8,17 +8,21 @@ on:
         type: choice
         options:
           - libdd-common
-          - libdd-telemetry
-          - libdd-ddsketch
-          - libdd-library-config
           - libdd-crashtracker
           - libdd-data-pipeline
-          - libdd-trace-protobuf
-          - libdd-trace-normalization
-          - libdd-trace-utils
+          - libdd-ddsketch
           - libdd-dogstatsd-client
-          - libdd-tinybytes
+          - libdd-library-config
           - libdd-log
+          - libdd-profiling
+          - libdd-profiling-protobuf
+          - libdd-telemetry
+          - libdd-tinybytes
+          - libdd-trace-normalization
+          - libdd-trace-obfuscation
+          - libdd-trace-protobuf
+          - libdd-trace-stats
+          - libdd-trace-utils
       # version:
       #   description: Version to release
       #   required: true
@@ -99,6 +103,11 @@ jobs:
             if [ "$TAG_EXISTS" = "true" ]; then
               echo "Executing cargo public-api for $NAME since $TAG..."
               CHECK_PUBLIC_API=$(./scripts/check-public-api.sh -p "$NAME" --all-features "$TAG".."$ORIGINAL_HEAD" 2>&1)
+
+              # if libdd-crashtracker, show check-public-api summary
+              if [ "$NAME" = "libdd-crashtracker" ]; then
+                ./scripts/check-public-api.sh -p "$NAME" --all-features "$TAG".."$ORIGINAL_HEAD" --format=summary
+              fi
               
               echo "$CHECK_PUBLIC_API"
 
@@ -113,7 +122,11 @@ jobs:
               NEXT_VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r --arg name "$NAME" '.packages[] | select(.name == $name) | .version')
               NEXT_TAG="$NAME-v$NEXT_VERSION"
 
-              echo "Executing git cliff for $NAME since $TAG to $NEXT_TAG..."
+              # Check what commits git sees in the range
+              echo "Commits in the range $TAG..$ORIGINAL_HEAD:"
+              git log --oneline "$TAG".."$ORIGINAL_HEAD" -- "$CRATE_PATH/"
+              
+              echo "Executing git cliff for $NAME since $TAG to $ORIGINAL_HEAD, next tag: $NEXT_TAG..."
               git cliff --tag "$NEXT_TAG" --include-path "$CRATE_PATH/**" --prepend "$CRATE_PATH/CHANGELOG.md" --tag-pattern "$NAME-v.*" -u -v "$TAG".."$ORIGINAL_HEAD"
               git add "$CRATE_PATH/CHANGELOG.md"
 
