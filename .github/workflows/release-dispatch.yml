@@ -84,6 +84,8 @@ jobs:
         run: |
           echo "Check for changes in public API..."
           
+          ORIGINAL_HEAD=$(git rev-parse HEAD)
+
           # Initialize results array
           echo "[]" > /tmp/api-changes.json
           
@@ -96,9 +98,11 @@ jobs:
             
             if [ "$TAG_EXISTS" = "true" ]; then
               echo "Executing cargo public-api for $NAME since $TAG..."
-              CHECK_PUBLIC_API=$(./scripts/check-public-api.sh -p "$NAME" --all-features "$TAG"..HEAD 2>&1)
+              CHECK_PUBLIC_API=$(./scripts/check-public-api.sh -p "$NAME" --all-features "$TAG".."$ORIGINAL_HEAD" 2>&1)
               
               echo "$CHECK_PUBLIC_API"
+
+              # TODO: Should we skip the release if the public API is not changed? (removed: 0, changed: 0, added: 0)
 
               LEVEL=$(echo "$CHECK_PUBLIC_API" | jq -r '.level')
               
@@ -114,7 +118,7 @@ jobs:
               NEXT_TAG="$NAME-v$NEXT_VERSION"
 
               echo "Executing git cliff for $NAME since $TAG to $NEXT_TAG..."
-              git cliff --tag "$NEXT_TAG" --include-path "$CRATE_PATH/**" --prepend "$CRATE_PATH/CHANGELOG.md" --tag-pattern "$NAME-v.*" -u -v "$TAG"..HEAD
+              git cliff --tag "$NEXT_TAG" --include-path "$CRATE_PATH/**" --prepend "$CRATE_PATH/CHANGELOG.md" --tag-pattern "$NAME-v.*" -u -v "$TAG".."$ORIGINAL_HEAD"
               git add "$CRATE_PATH/CHANGELOG.md"
 
               # Commit the changes
