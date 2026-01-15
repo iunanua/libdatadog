@@ -1,4 +1,4 @@
-name: Release - Open a release PR
+name: Release - Open a release proposal PR
 on:
   workflow_dispatch:
     inputs:
@@ -81,10 +81,10 @@ jobs:
 
       - name: Check for changes in public API
         id: check-public-api
+        env:
+          ORIGINAL_HEAD: ${{ github.sha }}
         run: |
           echo "Check for changes in public API..."
-          
-          ORIGINAL_HEAD=$(git rev-parse HEAD)
 
           # Initialize results array
           echo "[]" > /tmp/api-changes.json
