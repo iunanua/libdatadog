@@ -91,14 +91,14 @@ jobs:
           jq -c '.[]' /tmp/commits-by-crate.json | while read -r crate; do
             NAME=$(echo "$crate" | jq -r '.name')
             TAG=$(echo "$crate" | jq -r '.tag')
-            PATH=$(echo "$crate" | jq -r '.path')
+            CRATE_PATH=$(echo "$crate" | jq -r '.path')
             TAG_EXISTS=$(echo "$crate" | jq -r '.tag_exists')
             
             if [ "$TAG_EXISTS" = "true" ]; then
               echo "Executing cargo public-api for $NAME since $TAG..."
-              CHECK_PUBLIC_API=$(./scripts/check-public-api.sh -p "$NAME" --all-features "$TAG"..HEAD)
+              CHECK_PUBLIC_API=$(./scripts/check-public-api.sh -p "$NAME" --all-features "$TAG"..HEAD 2>&1)
               
-              echo "CHECK_PUBLIC_API: $CHECK_PUBLIC_API"
+              echo "$CHECK_PUBLIC_API"
 
               LEVEL=$(echo "$CHECK_PUBLIC_API" | jq -r '.level')
               
@@ -112,8 +112,8 @@ jobs:
               # Update the CHANGELOG.md
               NEXT_VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[] | select(.name == "$NAME") | .version')
               NEXT_TAG="$NAME-v$NEXT_VERSION"
-              git cliff --tag "$NEXT_TAG" --include-path "$PATH/**" --prepend "$PATH/CHANGELOG.md" --tag-pattern "$NAME-v.*" -u
-              git add "$PATH/CHANGELOG.md"
+              git cliff --tag "$NEXT_TAG" --include-path "$CRATE_PATH/**" --prepend "$CRATE_PATH/CHANGELOG.md" --tag-pattern "$NAME-v.*" -u
+              git add "$CRATE_PATH/CHANGELOG.md"
 
               # Commit the changes
               cargo release commit --no-confirm -x
