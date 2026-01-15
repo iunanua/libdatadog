@@ -112,7 +112,9 @@ jobs:
               # Update the CHANGELOG.md
               NEXT_VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[] | select(.name == "$NAME") | .version')
               NEXT_TAG="$NAME-v$NEXT_VERSION"
-              git cliff --tag "$NEXT_TAG" --include-path "$CRATE_PATH/**" --prepend "$CRATE_PATH/CHANGELOG.md" --tag-pattern "$NAME-v.*" -u
+
+              echo "Executing git cliff for $NAME since $TAG to $NEXT_TAG..."
+              git cliff --tag "$NEXT_TAG" --include-path "$CRATE_PATH/**" --prepend "$CRATE_PATH/CHANGELOG.md" --tag-pattern "$NAME-v.*" -u -v "$TAG"..HEAD
               git add "$CRATE_PATH/CHANGELOG.md"
 
               # Commit the changes
