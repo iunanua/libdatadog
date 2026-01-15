@@ -106,10 +106,6 @@ jobs:
 
               LEVEL=$(echo "$CHECK_PUBLIC_API" | jq -r '.level')
               
-              # Add to results array
-              jq --arg name "$NAME" --arg level "$LEVEL" '. += [{"name": $name, "level": $level}]' \
-                /tmp/api-changes.json > /tmp/api-changes.tmp && mv /tmp/api-changes.tmp /tmp/api-changes.json
-              
               echo "Executing cargo release for $NAME since $TAG with level $LEVEL..."
               cargo release version -p "$NAME" --prev-tag-name "$TAG" -x $LEVEL --no-confirm
 
@@ -123,6 +119,10 @@ jobs:
 
               # Commit the changes
               cargo release commit --no-confirm -x
+
+              # Add to results array
+              jq --arg name "$NAME" --arg level "$LEVEL" --arg tag "$NEXT_TAG" --arg version "$NEXT_VERSION" '. += [{"name": $name, "level": $level, "tag": $tag, "version": $version}]' \
+                /tmp/api-changes.json > /tmp/api-changes.tmp && mv /tmp/api-changes.tmp /tmp/api-changes.json
             else
               echo "No previous release tag for $NAME, skipping API diff"
             fi
@@ -149,7 +149,10 @@ jobs:
             .[] | 
             . as $crate |
             ($api[0] | map(select(.name == $crate.name)) | first // {level: "unknown"}) as $api_info |
-            "## \($crate.name) (\($api_info.level) semver bump)\n\n" +
+            "## \($crate.name)\n\n" +
+            "**Next version:** `\($api_info.version)`\n\n" +
+            "**Semver bump:** `\($api_info.level)`\n\n" +
+            "**Tag:** `\($api_info.tag)`\n\n" +
             ($crate.commits | map("- \(.subject)") | join("\n"))
           ' /tmp/commits-by-crate.json)
           
