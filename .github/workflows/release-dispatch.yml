@@ -139,7 +139,7 @@ jobs:
               git add "$CRATE_PATH/CHANGELOG.md"
 
               # Commit the changes
-              cargo release commit --no-confirm -x --sign-commit
+              cargo release commit --no-confirm -x --sign-commit -vv
 
               # Add to results array
               jq --arg name "$NAME" --arg level "$LEVEL" --arg tag "$NEXT_TAG" --arg version "$NEXT_VERSION" '. += [{"name": $name, "level": $level, "tag": $tag, "version": $version}]' \
@@ -149,6 +149,10 @@ jobs:
             fi
           done
           
+          # Show the commits since the original head
+          echo "Commits since the original head:"
+          git log --oneline "$ORIGINAL_HEAD"..HEAD
+
           # Output the results
           echo "API changes summary:"
           cat /tmp/api-changes.json | jq .
