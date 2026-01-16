@@ -80,6 +80,7 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
           BRANCH_NAME="release-proposal/${{ inputs.crate }}/$TIMESTAMP"
           git checkout -b "$BRANCH_NAME"
+          git push origin "$BRANCH_NAME"
           echo "Branch created: $BRANCH_NAME"
           echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
 
@@ -100,6 +101,7 @@ jobs:
             CRATE_PATH=$(echo "$crate" | jq -r '.path')
             TAG_EXISTS=$(echo "$crate" | jq -r '.tag_exists')
             
+            # TODO: handle case where the tag does not exist
             if [ "$TAG_EXISTS" = "true" ]; then
               echo "Executing cargo public-api for $NAME since $TAG..."
               CHECK_PUBLIC_API=$(./scripts/check-public-api.sh -p "$NAME" --all-features "$TAG".."$ORIGINAL_HEAD" 2>&1)
@@ -131,7 +133,7 @@ jobs:
               git add "$CRATE_PATH/CHANGELOG.md"
 
               # Commit the changes
-              cargo release commit --no-confirm -x
+              cargo release commit --no-confirm -x --sign-commit
 
               # Add to results array
               jq --arg name "$NAME" --arg level "$LEVEL" --arg tag "$NEXT_TAG" --arg version "$NEXT_VERSION" '. += [{"name": $name, "level": $level, "tag": $tag, "version": $version}]' \
