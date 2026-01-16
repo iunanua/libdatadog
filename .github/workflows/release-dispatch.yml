@@ -34,6 +34,7 @@ jobs:
       id-token: write # Enable OIDC
       pull-requests: write
       contents: write
+    needs: update-release-branch
     runs-on: ubuntu-latest
     # TODO: uncomment this when we have a way to test this workflow
     # if: ${{ github.repository_owner == 'datadog' }}
@@ -77,11 +78,12 @@ jobs:
       - name: Create a branch for the release proposal
         id: proposal-branch
         run: |
+          git checkout release
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
           BRANCH_NAME="release-proposal/${{ inputs.crate }}/$TIMESTAMP"
           git checkout -b "$BRANCH_NAME"
           git push origin "$BRANCH_NAME"
-          echo "Branch created: $BRANCH_NAME"
+          echo "Branch created: $BRANCH_NAME from release branch"
           echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Check for changes in public API
@@ -185,7 +187,7 @@ jobs:
             --body "$PR_BODY" \
             --base "release"
       
-  merge-release-branch:
+  update-release-branch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
