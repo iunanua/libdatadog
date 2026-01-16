@@ -102,6 +102,7 @@ jobs:
             TAG=$(echo "$crate" | jq -r '.tag')
             CRATE_PATH=$(echo "$crate" | jq -r '.path')
             TAG_EXISTS=$(echo "$crate" | jq -r '.tag_exists')
+            COMMITS=$(echo "$crate" | jq -r '.commits')
             
             # TODO: handle case where the tag does not exist
             if [ "$TAG_EXISTS" = "true" ]; then
@@ -135,7 +136,16 @@ jobs:
               git branch --contains "$TAG"
 
               # It seems that git cliff does not like to use tags that are not on the branch
-              git cliff --tag "$NEXT_TAG" --include-path "$CRATE_PATH/**" --prepend "$CRATE_PATH/CHANGELOG.md" --tag-pattern "$NAME-v.*" -u -v "$TAG".."$ORIGINAL_HEAD"
+              # git cliff --tag "$NEXT_TAG" --include-path "$CRATE_PATH/**" --prepend "$CRATE_PATH/CHANGELOG.md" --tag-pattern "$NAME-v.*" -u -v "$TAG".."$ORIGINAL_HEAD"
+              
+              for commit in $COMMITS; do
+                echo "Commit: $commit"
+                COMMIT_ID=$(echo "$commit" | jq -r '.hash')
+                COMMIT_MSG=$(echo "$commit" | jq -r '.message')
+
+                git cliff --tag "$NEXT_TAG" --prepend "$CRATE_PATH/CHANGELOG.md" --tag-pattern "$NAME-v.*" -v --with-commit "$COMMIT_ID" "$COMMIT_MSG"
+              done
+
               git add "$CRATE_PATH/CHANGELOG.md"
 
               # Commit the changes
