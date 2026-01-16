@@ -201,10 +201,11 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
         with:
           fetch-depth: 0
+          fetch-tags: true
       - name: Merge the main branch into the release branch
         run: |
-          git fetch origin release
+          git fetch origin release --tags
           git checkout release
           # only fast-forward the merge
           git merge --ff-only origin/main
-          git push origin release
+          git push origin release --tags
