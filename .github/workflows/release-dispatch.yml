@@ -103,7 +103,6 @@ jobs:
             CRATE_PATH=$(echo "$crate" | jq -r '.path')
             TAG_EXISTS=$(echo "$crate" | jq -r '.tag_exists')
             COMMITS=$(echo "$crate" | jq -r '.commits')
-            VERSION=$(echo "$crate" | jq -r '.version')
             
             if [ "$TAG_EXISTS" = "true" ]; then
               RANGE="$TAG..$ORIGINAL_HEAD"
@@ -129,7 +128,8 @@ jobs:
               RANGE="$ORIGINAL_HEAD"
               echo "No previous release tag for $NAME, using $ORIGINAL_HEAD as range"
 
-              LEVEL="$VERSION"
+              # Use the version from the crate metadata
+              LEVEL=$(echo "$crate" | jq -r '.version')
 
               echo "Executing cargo release for $NAME with level $LEVEL..."
               cargo release version -p "$NAME" -x $LEVEL --no-confirm
