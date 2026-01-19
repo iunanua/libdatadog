@@ -139,7 +139,7 @@ jobs:
             
             echo "Executing git cliff for $NAME since $RANGE, next tag: $NEXT_TAG..."
             echo "Is the tag $TAG in the branch:"
-            git branch --contains "$RANGE"
+            git branch --contains "$TAG"
 
             # It seems that git cliff does not like to use tags that are not on the branch
             git cliff --tag "$NEXT_TAG" --include-path "$CRATE_PATH/**/*" --prepend "$CRATE_PATH/CHANGELOG.md" --tag-pattern "$NAME-v.*" -u -v "$RANGE"
