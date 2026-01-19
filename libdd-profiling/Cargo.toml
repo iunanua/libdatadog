@@ -34,7 +34,7 @@ chrono = {version = "0.4", default-features = false, features = ["std", "clock"]
 crossbeam-utils = { version = "0.8.21" }
 libdd-alloc = { version = "1.0.0", path = "../libdd-alloc" }
 libdd-profiling-protobuf = { version = "1.0.0", path = "../libdd-profiling-protobuf", features = ["prost_impls"] }
-libdd-common = { version = "1.0.0", path = "../libdd-common" }
+libdd-common = { version = "1.1.0", path = "../libdd-common" }
 futures = { version = "0.3", default-features = false }
 hashbrown = { version = "0.16", default-features = false }
 http = "1.0"
