@@ -22,11 +22,16 @@ body = """
 {% endmacro -%}
 
 {% if version %}\
+    {% if version is containing("-v") %}
+        {% set version_crate = version | split(pat="-v") | last %}
+    {% else %}
+        {% set version_crate = version | trim_start_matches(pat="v") %}
+    {% endif %}
     {% if previous.version %}\
-        ## [{{ version | trim_start_matches(pat="v") }}]\
+        ## [{{ version_crate }}]\
           ({{ self::remote_url() }}/compare/{{ previous.version }}..{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
     {% else %}\
-        ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+        ## [{{ version_crate }}] - {{ timestamp | date(format="%Y-%m-%d") }}
     {% endif %}\
 {% else %}\
     ## [unreleased]
@@ -34,7 +39,7 @@ body = """
 
 {% for group, commits in commits | group_by(attribute="group") %}
     ### {{ group | striptags | trim | upper_first }}
-    {%- set is_others = group is containing("Others") %}
+    {%- set is_others = group is containing("Changed") %}
     {% for commit in commits
     | filter(attribute="scope")
     | sort(attribute="scope") %}
@@ -74,32 +79,21 @@ split_commits = false
 commit_preprocessors = [
   # Replace issue numbers with link templates to be updated in `changelog.postprocessors`.
   { pattern = '\((\w+\s)?#([0-9]+)\)', replace = "([#${2}](<REPO>/issues/${2}))" },
-  # Check spelling of the commit message using https://github.com/crate-ci/typos.
-  # If the spelling is incorrect, it will be fixed automatically.
-  # { pattern = '.*', replace_command = 'typos --write-changes -' },
 ]
 # An array of regex based parsers for extracting data from the commit message.
 # Assigns commits to groups.
 # Optionally sets the commit's scope and can decide to exclude commits from further processing.
 commit_parsers = [
-  { message = "^feat", group = "<!-- A -->⛰️  Features" },
-  { message = "^fix", group = "<!-- B -->🐛 Bug Fixes" },
-  { message = "^doc", group = "<!-- D -->📚 Documentation" },
-  { message = "^perf", group = "<!-- E -->⚡ Performance" },
+  { message = "^feat", group = "<!-- A -->Added" },
+  { message = "^fix", group = "<!-- C -->Fixed" },
   { message = "^refactor\\(clippy\\)", skip = true },
-  { message = "^refactor", group = "<!-- C -->🚜 Refactor" },
-  { message = "^style", group = "<!-- F -->🎨 Styling" },
-  { message = "^test", group = "<!-- G -->🧪 Testing" },
   { message = "^chore\\(release\\): prepare for", skip = true },
   { message = "^chore: Release", skip = true },
   { message = "^chore\\(deps.*\\)", skip = true },
   { message = "^chore\\(pr\\)", skip = true },
   { message = "^chore\\(pull\\)", skip = true },
   { message = "^chore\\(npm\\).*yarn\\.lock", skip = true },
-  { message = "^chore|^ci", group = "<!-- H -->⚙️ Miscellaneous Tasks" },
-  { body = ".*security", group = "<!-- I -->🛡️ Security" },
-  { message = "^revert", group = "<!-- J -->◀️ Revert" },
-  { message = ".*", group = "<!-- K -->Others" },
+  { message = ".*", group = "<!-- B -->Changed" },
 ]
 # Prevent commits that are breaking from being excluded by commit parsers.
 protect_breaking_commits = false
