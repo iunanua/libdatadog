@@ -124,7 +124,7 @@ jobs:
               LEVEL=$(echo "$CHECK_PUBLIC_API" | jq -r '.level')
 
               echo "Executing cargo release for $NAME since $TAG with level $LEVEL..."
-              cargo release version -p "$NAME" -x $LEVEL --no-confirm
+              cargo release version -p "$NAME" --prev-tag-name "$TAG" -x $LEVEL --no-confirm
             else
               RANGE="$ORIGINAL_HEAD"
               echo "No previous release tag for $NAME, using $ORIGINAL_HEAD as range"
