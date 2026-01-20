@@ -60,6 +60,7 @@ compute_semver_results() {
         fi
     else
         echo "Unexpected exit code from cargo-semver-checks: $SEMVER_EXIT_CODE" >&2
+        echo "$SEMVER_OUTPUT" >&2
         exit $SEMVER_EXIT_CODE
     fi
 
