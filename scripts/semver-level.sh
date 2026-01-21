@@ -89,7 +89,7 @@ compute_semver_results() {
 
     if [[ "$LEVEL" == "none" ]]; then
         # Try to run cargo-public-api diff against base branch
-        PUBLIC_API_OUTPUT=$(cargo public-api --package "$CRATE_NAME" diff "$baseline..$current" 2>&1)
+        PUBLIC_API_OUTPUT=$(eval cargo public-api --package "$CRATE_NAME" --color=never diff "$baseline..$current" 2>&1)
         EXIT_CODE=$?
 
         if [[ $EXIT_CODE -ne 0 ]]; then
@@ -98,6 +98,7 @@ compute_semver_results() {
           exit $EXIT_CODE
         fi
 
+        log_verbose "$PUBLIC_API_OUTPUT"
 
         # Check for removed items (major change)
         if echo "$PUBLIC_API_OUTPUT" | grep -q "Removed items from the public API$"; then
