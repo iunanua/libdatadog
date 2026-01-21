@@ -78,7 +78,7 @@ compute_semver_results() {
             # It's a semver violation - this is a major change
             LEVEL="major"
             log_verbose "Detected semver violations (major change)" >&2
-            echo "$SEMVER_OUTPUT" >&2
+            # echo "$SEMVER_OUTPUT" >&2
         fi
     else
         echo "Unexpected exit code from cargo-semver-checks: $SEMVER_EXIT_CODE" >&2
@@ -89,7 +89,7 @@ compute_semver_results() {
 
     if [[ "$LEVEL" == "none" ]]; then
         # Try to run cargo-public-api diff against base branch
-        PUBLIC_API_OUTPUT=$(eval cargo public-api --package "$CRATE_NAME" --color=never diff "$baseline..$current" 2>&1)
+        PUBLIC_API_OUTPUT=$(cargo public-api --package "$CRATE_NAME" --color=never diff "$baseline..$current" 2>&1)
         EXIT_CODE=$?
 
         if [[ $EXIT_CODE -ne 0 ]]; then
