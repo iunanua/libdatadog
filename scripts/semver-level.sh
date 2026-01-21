@@ -72,6 +72,7 @@ compute_semver_results() {
 
         if [[ $EXIT_CODE -ne 0 ]]; then
           echo "Unexpected error for $CRATE_NAME (exit code: $EXIT_CODE)" >&2
+          echo "$PUBLIC_API_OUTPUT" >&2
           exit $EXIT_CODE
         fi
 
