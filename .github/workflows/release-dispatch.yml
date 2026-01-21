@@ -49,7 +49,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: dtolnay/rust-toolchain@nightly
         with:
-          toolchain: nightly-2024-12-01
+          toolchain: nightly-2024-12-01 # rustc version is 1.85.0-nightly
       - uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7 # 2.3.1
         with:
           tool: cargo-public-api # @0.50.2
@@ -58,7 +58,7 @@ jobs:
           tool: cargo-release
       - uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7 # 2.3.1
         with:
-          tool: git-cliff
+          tool: git-cliff@2.9.1 # it supports rustc 1.85.0
       - uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7 # 2.3.1
         with:
           tool: cargo-semver-checks # @0.45.0
