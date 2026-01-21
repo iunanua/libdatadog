@@ -4,11 +4,34 @@
 CRATES_JSON="${1:-[]}"
 BASE_REF="${2:-main}"
 CURRENT_REF="${3:-HEAD}"
+VERBOSE=false
 
 # Use GITHUB_OUTPUT from environment or default to /dev/stdout for local testing
 if [ -z "$GITHUB_OUTPUT" ]; then
     GITHUB_OUTPUT=/dev/stdout
 fi
+
+for arg in "$@"; do
+    case "$arg" in
+        --verbose|-v)
+            VERBOSE=true
+            ;;
+        --help|-h)
+            echo "Usage: $0 CRATES_JSON BASE_REF CURRENT_REF"
+            echo ""
+            echo "Checks the semver level of changes for a given crate."
+            echo ""
+            echo "Options:"
+            echo "  --verbose, -v   Show verbose output"
+            echo "  --help, -h      Show this help message"
+    esac
+done
+
+log_verbose() {
+    if [ "$VERBOSE" = true ]; then
+        echo "$@" >&2
+    fi
+}
 
 compute_semver_results() {
     local crates=$1
@@ -23,7 +46,7 @@ compute_semver_results() {
     fi
 
     # Fetch base commit
-    git fetch origin "$baseline" --depth=50
+    git fetch origin "$baseline" --depth=50 --quiet
 
     # if $crates is not a json use it as a single crate name
     if ! echo "$crates" | jq -e '.' > /dev/null 2>&1; then
@@ -33,11 +56,10 @@ compute_semver_results() {
         readarray -t CRATES < <(echo "$crates" | jq -r '.[]')
     fi
 
-
     for CRATE_NAME in "${CRATES[@]}"; do
-    echo "========================================" >&2
-    echo "Checking semver for: $CRATE_NAME" >&2
-    echo "========================================" >&2
+    log_verbose "========================================" >&2
+    log_verbose "Checking semver for: $CRATE_NAME" >&2
+    log_verbose "========================================" >&2
 
     LEVEL="none"
 
@@ -45,7 +67,7 @@ compute_semver_results() {
     SEMVER_EXIT_CODE=$?
 
     if [[ $SEMVER_EXIT_CODE -eq 0 ]]; then
-        echo "No semver violations detected" >&2
+        log_verbose "No semver violations detected" >&2
         LEVEL="none"
     elif [[ $SEMVER_EXIT_CODE -eq 1 ]]; then
         # Check if it's an error or actual semver violation
@@ -55,7 +77,7 @@ compute_semver_results() {
         else
             # It's a semver violation - this is a major change
             LEVEL="major"
-            echo "Detected semver violations (major change)" >&2
+            log_verbose "Detected semver violations (major change)" >&2
             echo "$SEMVER_OUTPUT" >&2
         fi
     else
@@ -81,7 +103,7 @@ compute_semver_results() {
         if echo "$PUBLIC_API_OUTPUT" | grep -q "Removed items from the public API$"; then
           if ! echo "$PUBLIC_API_OUTPUT" | grep -A 2 "^Removed items from the public API$" | grep -q "^(none)$"; then
             LEVEL="major"
-            echo "Detected removed items (major change)" >&2
+            log_verbose "Detected removed items (major change)" >&2
           fi
         fi
 
@@ -89,7 +111,7 @@ compute_semver_results() {
         if echo "$PUBLIC_API_OUTPUT" | grep -q "^Changed items in the public API$"; then
           if ! echo "$PUBLIC_API_OUTPUT" | grep -A 2 "^Changed items in the public API$" | grep -q "^(none)$"; then
             LEVEL="major"
-            echo "Detected changed items (major change)" >&2
+            log_verbose "Detected changed items (major change)" >&2
           fi
         fi
 
@@ -98,7 +120,7 @@ compute_semver_results() {
           if echo "$PUBLIC_API_OUTPUT" | grep -q "Added items to the public API$"; then
             if ! echo "$PUBLIC_API_OUTPUT" | grep -A 2 "^Added items to the public API$" | grep -q "^(none)"; then
               LEVEL="minor"
-              echo "Detected added items (minor change)" >&2
+              log_verbose "Detected added items (minor change)" >&2
             fi
           fi
         fi
