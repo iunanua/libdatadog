@@ -97,7 +97,7 @@ jobs:
 
           # Initialize results array
           echo "[]" > /tmp/api-changes.json
-          
+
           # iterate over the commits and execute cargo release for each crate
           jq -c '.[]' /tmp/commits-by-crate.json | while read -r crate; do
             NAME=$(echo "$crate" | jq -r '.name')
@@ -113,8 +113,10 @@ jobs:
               # TODO: Should we skip the release if the tag is not in the branch?
               echo "Is the tag $TAG in the branch:"
               git branch --contains "$TAG"
-
-              # TODO: Should we skip the release if the public API is not changed? (removed: 0, changed: 0, added: 0)
+              if [ $? -ne 0 ]; then
+                echo "Error: Tag $TAG is not in the branch" >&2
+                exit 1
+              fi
 
               echo "Executing semver-level.sh for $NAME since $RANGE..."
               SEMVER_LEVEL=$(./scripts/semver-level.sh "$NAME" "$TAG" 2>&1)
@@ -130,6 +132,12 @@ jobs:
 
               # Use the version from the crate metadata
               LEVEL=$(echo "$crate" | jq -r '.version')
+
+              # fail when the version is not an initial release
+              if [ "$LEVEL" != "1.0.0" ] && [ "$LEVEL" != "0.1.0" ]; then
+                echo "Error: $NAME is not a 1.0.0 or 0.1.0 release" >&2
+                exit 1
+              fi
 
               echo "Executing cargo release for $NAME with level $LEVEL..."
               cargo release version -p "$NAME" -x $LEVEL --no-confirm
