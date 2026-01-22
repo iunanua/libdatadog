@@ -109,19 +109,19 @@ jobs:
             echo "Checking Rust toolchain versions..."
 
             echo "Nightly rustdoc:"
-            rustup run nightly-2025-08-02 rustdoc --version
+            rustup run nightly rustdoc --version
             
             echo "Stable rustdoc:"
             rustup run stable rustdoc --version
             
             echo "Nightly cargo semver-checks:"
-            rustup run nightly-2025-08-02 cargo semver-checks --version
+            rustup run nightly cargo semver-checks --version
 
             echo "Stable cargo semver-checks:"
             rustup run stable cargo semver-checks --version
             
             echo "Nightly cargo public-api:"
-            rustup run nightly-2025-08-02 cargo public-api --version
+            rustup run nightly cargo public-api --version
             
             echo "Stable cargo public-api:"
             rustup run stable cargo public-api --version
