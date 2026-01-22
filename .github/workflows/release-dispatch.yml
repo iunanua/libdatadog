@@ -59,6 +59,7 @@ jobs:
       - uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7 # 2.3.1
         with:
           tool: cargo-semver-checks
+          locked: false
 
       - name: Get publication order for crate and dependencies
         run: |
@@ -117,6 +118,10 @@ jobs:
                 echo "Error: Tag $TAG is not in the branch" >&2
                 exit 1
               fi
+
+              echo "Checking cargo semver-checks and cargo public-api versions..."
+              cargo semver-checks --version
+              cargo public-api --version
 
               echo "Executing semver-level.sh for $NAME since $RANGE..."
               SEMVER_LEVEL=$(./scripts/semver-level.sh "$NAME" "$TAG" 2>&1)
