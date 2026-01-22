@@ -14,7 +14,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         -h|--help)
-            echo "Usage: $0 [-v] [-h] CRATES_JSON BASE_REF CURRENT_REF"
+            echo "Usage: $0 [-v] [-h] CRATE BASE_REF CURRENT_REF"
             exit 0
             ;;
         -*)
@@ -28,9 +28,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-CRATES_JSON="${1:?ERROR: CRATES_JSON is required}"
+CRATE="${1:?ERROR: CRATE is required}"
 BASE_REF="${2:-main}"
-CURRENT_REF="${3:-HEAD}"  # Optional with default
+CURRENT_REF="${3:-HEAD}"
 
 log_verbose() {
     if [ "$VERBOSE" = true ]; then
@@ -39,11 +39,9 @@ log_verbose() {
 }
 
 compute_semver_results() {
-    local crates=$1
+    local crate=$1
     local baseline=$2
     local current=$3
-    local highest_level="none"
-    local -a crates_checked=()
 
     # If current is not provided set it to the tip of the branch
     if [ -z "$current" ]; then
@@ -53,22 +51,13 @@ compute_semver_results() {
     # Fetch base commit
     git fetch origin "$baseline" --depth=50 --quiet
 
-    # if $crates is not a json use it as a single crate name
-    if ! echo "$crates" | jq -e '.' > /dev/null 2>&1; then
-        CRATES=("$crates")
-    else
-        # Parse JSON array
-        readarray -t CRATES < <(echo "$crates" | jq -r '.[]')
-    fi
-
-    for CRATE_NAME in "${CRATES[@]}"; do
     log_verbose "========================================" >&2
-    log_verbose "Checking semver for: $CRATE_NAME" >&2
+    log_verbose "Checking semver for: $crate" >&2
     log_verbose "========================================" >&2
 
     LEVEL="none"
 
-    SEMVER_OUTPUT=$(cargo semver-checks -p "$CRATE_NAME" --color=never --all-features --baseline-rev "$baseline" 2>&1)
+    SEMVER_OUTPUT=$(cargo semver-checks -p "$crate" --all-features --baseline-rev "$baseline" 2>&1)
     SEMVER_EXIT_CODE=$?
 
     if [[ $SEMVER_EXIT_CODE -eq 0 ]]; then
@@ -94,11 +83,11 @@ compute_semver_results() {
 
     if [[ "$LEVEL" == "none" ]]; then
         # Try to run cargo-public-api diff against base branch
-        PUBLIC_API_OUTPUT=$(cargo public-api --package "$CRATE_NAME" --color=never diff "$baseline..$current" 2>&1)
+        PUBLIC_API_OUTPUT=$(cargo public-api --package "$crate" diff "$baseline..$current" 2>&1)
         EXIT_CODE=$?
 
         if [[ $EXIT_CODE -ne 0 ]]; then
-          echo "Unexpected error for $CRATE_NAME (exit code: $EXIT_CODE)" >&2
+          echo "Unexpected error for $crate (exit code: $EXIT_CODE)" >&2
           echo "$PUBLIC_API_OUTPUT" >&2
           exit $EXIT_CODE
         fi
@@ -132,54 +121,30 @@ compute_semver_results() {
         fi
     fi
 
-    # If we detected changes, update the highest level
-    if [[ "$LEVEL" != "none" ]]; then
-      crates_checked+=("$CRATE_NAME:$LEVEL")
-
-      # Update highest level
-      if [[ "$LEVEL" == "major" ]]; then
-        highest_level="major"
-      elif [[ "$LEVEL" == "minor" ]] && [[ "$highest_level" != "major" ]]; then
-        highest_level="minor"
-      elif [[ "$highest_level" == "none" ]]; then
-        highest_level="patch"
-      fi
-    else
+    if [[ "$LEVEL" == "none" ]]; then
       # No API changes detected, assume patch level
-      crates_checked+=("$CRATE_NAME:patch")
-      if [[ "$highest_level" == "none" ]]; then
-        highest_level="patch"
-      fi
+      LEVEL="patch"
     fi
-    done
-
-    # Build JSON output
-    local crates_json="[]"
-    for crate_entry in "${crates_checked[@]}"; do
-        IFS=':' read -r name level <<< "$crate_entry"
-        crates_json=$(echo "$crates_json" | jq --arg name "$name" --arg level "$level" '. += [{"name": $name, "level": $level}]')
-    done
-
-    # Create final JSON object
-    jq -n \
-        --arg highest_level "$highest_level" \
-        --argjson crates "$crates_json" \
-        '{highest_level: $highest_level, crates: $crates}'
+    
+    echo "$(jq -n \
+        --arg name "$crate" \
+        --arg level "$LEVEL" \
+        '{"name": $name, "level": $level}')"
 }
 
 # Run the computation and capture JSON output
-RESULT_JSON=$(compute_semver_results "$CRATES_JSON" "$BASE_REF" "$CURRENT_REF")
+RESULT_JSON=$(compute_semver_results "$CRATE" "$BASE_REF" "$CURRENT_REF")
 
 # Output JSON to stdout (captured by workflow)
 echo "$RESULT_JSON"
 
 # Extract values from JSON for backwards compatibility / local testing
-HIGHEST_LEVEL=$(echo "$RESULT_JSON" | jq -r '.highest_level')
-CRATES_CHECKED=$(echo "$RESULT_JSON" | jq -r '.crates | map("\(.name):\(.level)") | join(" ")')
+NAME=$(echo "$RESULT_JSON" | jq -r '.name')
+LEVEL=$(echo "$RESULT_JSON" | jq -r '.level')
 
 # For local testing, also output individual values
 if [[ "$GITHUB_OUTPUT" == "/dev/stdout" ]]; then
   echo "---" >&2
-  echo "semver_level=$HIGHEST_LEVEL" >&2
-  echo "crates_checked=$CRATES_CHECKED" >&2
+  echo "crate=$NAME" >&2
+  echo "semver_level=$LEVEL" >&2
 fi

@@ -115,7 +115,7 @@ jobs:
               SEMVER_LEVEL=$(./scripts/semver-level.sh "$NAME" "$TAG" 2>&1)
               echo "Semver level: $SEMVER_LEVEL"
 
-              LEVEL=$(echo "$SEMVER_LEVEL" | jq -r '.highest_level')
+              LEVEL=$(echo "$SEMVER_LEVEL" | jq -r '.level')
 
               echo "Executing cargo release for $NAME since $TAG with level $LEVEL..."
               cargo release version -p "$NAME" --prev-tag-name "$TAG" -x $LEVEL --no-confirm
