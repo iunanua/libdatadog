@@ -93,6 +93,11 @@ jobs:
         env:
           ORIGINAL_HEAD: ${{ github.sha }}
         run: |
+          echo "Release version bumps..."
+
+          # Initialize results array
+          echo "[]" > /tmp/api-changes.json
+          
           # iterate over the commits and execute cargo release for each crate
           jq -c '.[]' /tmp/commits-by-crate.json | while read -r crate; do
             NAME=$(echo "$crate" | jq -r '.name')
