@@ -46,6 +46,8 @@ jobs:
         with:
           cache-targets: true
       - uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2025-01-09
       - uses: dtolnay/rust-toolchain@stable
       - uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7 # 2.3.1
         with:
