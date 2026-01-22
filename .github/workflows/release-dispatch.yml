@@ -108,6 +108,28 @@ jobs:
             TAG_EXISTS=$(echo "$crate" | jq -r '.tag_exists')
             COMMITS=$(echo "$crate" | jq -r '.commits')
             
+            echo "Checking Rust toolchain versions..."
+            echo "Nightly rustdoc:"
+            rustup run nightly rustdoc --version
+            echo "Stable rustdoc:"
+            rustup run stable rustdoc --version
+            echo "Nightly cargo semver-checks:"
+            rustup run nightly cargo semver-checks --version
+            echo "Stable cargo semver-checks:"
+            rustup run stable cargo semver-checks --version
+            echo "Nightly cargo public-api:"
+            rustup run nightly cargo public-api --version
+            echo "Stable cargo public-api:"
+            rustup run stable cargo public-api --version
+            echo "Rustup show:"
+            rustup show
+
+            # if there are no commits, skip the release
+            if [ "$COMMITS" = "[]" ]; then
+              echo "No commits since last release for $NAME, skipping release"
+              continue
+            fi
+
             if [ "$TAG_EXISTS" = "true" ]; then
               RANGE="$TAG..$ORIGINAL_HEAD"
               echo "Using $RANGE as range"
@@ -119,9 +141,6 @@ jobs:
                 echo "Error: Tag $TAG is not in the branch" >&2
                 exit 1
               fi
-
-              echo "Checking Rust toolchain versions..."
-              rustup show
 
               echo "Executing semver-level.sh for $NAME since $RANGE..."
               SEMVER_LEVEL=$(./scripts/semver-level.sh "$NAME" "$TAG" 2>&1)
