@@ -63,7 +63,7 @@ compute_semver_results() {
 
     LEVEL="none"
 
-    SEMVER_OUTPUT=$(cargo semver-checks -p "$CRATE_NAME" --all-features --baseline-rev "$baseline" 2>&1)
+    SEMVER_OUTPUT=$(cargo semver-checks -p "$CRATE_NAME" --color=never --all-features --baseline-rev "$baseline" 2>&1)
     SEMVER_EXIT_CODE=$?
 
     if [[ $SEMVER_EXIT_CODE -eq 0 ]]; then
@@ -71,14 +71,14 @@ compute_semver_results() {
         LEVEL="none"
     elif [[ $SEMVER_EXIT_CODE -eq 1 ]]; then
         # Check if it's an error or actual semver violation
-        if echo "$SEMVER_OUTPUT" | grep -qE "(error:|Error|failed to|could not|unable to)"; then
-            echo "Error running cargo-semver-checks: $SEMVER_OUTPUT" >&2
-            exit $SEMVER_EXIT_CODE
-        else
+        if echo "$SEMVER_OUTPUT" | grep -qE "Summary semver requires new major version"; then
             # It's a semver violation - this is a major change
             LEVEL="major"
             log_verbose "Detected semver violations (major change)" >&2
-            # echo "$SEMVER_OUTPUT" >&2
+            log_verbose "$SEMVER_OUTPUT" >&2
+        else
+            echo "Error running cargo-semver-checks: $SEMVER_OUTPUT" >&2
+            exit $SEMVER_EXIT_CODE
         fi
     else
         echo "Unexpected exit code from cargo-semver-checks: $SEMVER_EXIT_CODE" >&2
