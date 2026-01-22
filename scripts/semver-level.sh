@@ -57,7 +57,7 @@ compute_semver_results() {
 
     LEVEL="none"
 
-    SEMVER_OUTPUT=$(cargo semver-checks -p "$crate" --all-features --baseline-rev "$baseline" 2>&1)
+    SEMVER_OUTPUT=$(cargo semver-checks -p "$crate" --color=never --all-features --baseline-rev "$baseline" 2>&1)
     SEMVER_EXIT_CODE=$?
 
     if [[ $SEMVER_EXIT_CODE -eq 0 ]]; then
@@ -83,7 +83,7 @@ compute_semver_results() {
 
     if [[ "$LEVEL" == "none" ]]; then
         # Try to run cargo-public-api diff against base branch
-        PUBLIC_API_OUTPUT=$(cargo public-api --package "$crate" diff "$baseline..$current" 2>&1)
+        PUBLIC_API_OUTPUT=$(cargo public-api --package "$crate" --color=never diff "$baseline..$current" 2>&1)
         EXIT_CODE=$?
 
         if [[ $EXIT_CODE -ne 0 ]]; then
