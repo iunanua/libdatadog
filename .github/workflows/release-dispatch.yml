@@ -40,9 +40,11 @@ jobs:
       - name: Check if a release proposal is ongoing
         run: |
           # Check if there are any branches with the prefix "${{ env.PROPOSAL_BRANCH_PREFIX }}"
-          git branch -r --list "origin/${{ env.PROPOSAL_BRANCH_PREFIX }}/*"
-          if [ $? -eq 0 ]; then
-            echo "Error: A release proposal is ongoing. Please cancel the ongoing release proposal or wait for it to be merged." >&2
+          EXISTING_BRANCHES=$(git branch -r --list "origin/${{ env.PROPOSAL_BRANCH_PREFIX }}/*")
+          if [ -n "$EXISTING_BRANCHES" ]; then
+            echo "Error: A release proposal is ongoing. Please cancel it or wait for it to be merged." >&2
+            echo "Existing branches:"
+            echo "$EXISTING_BRANCHES"
             exit 1
           fi
           echo "No release proposal is ongoing."
