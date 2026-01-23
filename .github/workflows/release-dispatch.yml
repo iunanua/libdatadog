@@ -28,7 +28,7 @@ env:
   RELEASE_BRANCH: release
 
 jobs:
-  make-release-pr:
+  cargo-release:
     permissions:
       id-token: write # Enable OIDC
       pull-requests: write
@@ -188,23 +188,54 @@ jobs:
             '. += [{"name": $name, "level": $level, "tag": $tag, "version": $version, "initial_release": $initial_release}]' \
               /tmp/api-changes.json > /tmp/api-changes.tmp && mv /tmp/api-changes.tmp /tmp/api-changes.json
           done
-          
+
+          # Check if there are commits to push
+          if git diff --quiet "${{ env.RELEASE_BRANCH }}"; then
+            echo "No changes to push"
+            exit 0
+          fi
+
+          git push origin "$BRANCH_NAME"
+
           # Output the results
           echo "API changes summary:"
           cat /tmp/api-changes.json | jq .
 
+      - name: Upload release data
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-data
+          path: |
+            /tmp/commits-by-crate.json
+            /tmp/api-changes.json
+          retention-days: 1
+
+    outputs:
+      branch_name: ${{ steps.proposal-branch.outputs.branch_name }}
+
+  create-pr:
+    needs: cargo-release
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+        with:
+          ref: ${{ needs.cargo-release.outputs.branch_name }}
+
+      - name: Download release data
+        uses: actions/download-artifact@v4
+        with:
+          name: release-data
+          path: /tmp
+
       - name: Create a PR
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |  
-          BRANCH_NAME="${{ steps.proposal-branch.outputs.branch_name }}"
-          
-          # Check if there are commits to push
-          if git diff --quiet origin/main; then
-            echo "No changes to push"
-            exit 0
-          fi
-          
+        run: |
+          BRANCH_NAME="${{ needs.cargo-release.outputs.branch_name }}"
+                    
           # Generate the PR body by merging commits and API changes
           read -r -d '' JQ_FILTER << 'EOF'
           .[] |
@@ -238,8 +269,8 @@ jobs:
           
           echo "PR_BODY: $PR_BODY"
 
-          git push origin "$BRANCH_NAME"
           gh pr create \
+            --head "$BRANCH_NAME" \
             --title "chore(release): proposal for ${{ inputs.crate }}" \
             --body "$PR_BODY" \
             --base "${{ env.RELEASE_BRANCH }}"
