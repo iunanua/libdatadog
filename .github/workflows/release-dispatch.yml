@@ -107,7 +107,8 @@ jobs:
             CRATE_PATH=$(echo "$crate" | jq -r '.path')
             TAG_EXISTS=$(echo "$crate" | jq -r '.tag_exists')
             COMMITS=$(echo "$crate" | jq -r '.commits')
-            
+            INITIAL_RELEASE=$(echo "$crate" | jq -r '.version == "1.0.0" or .version == "0.1.0"')
+
             echo "Checking Rust toolchain versions..."
 
             # if there are no commits, skip the release
@@ -144,7 +145,7 @@ jobs:
               LEVEL=$(echo "$crate" | jq -r '.version')
 
               # fail when the version is not an initial release
-              if [ "$LEVEL" != "1.0.0" ] && [ "$LEVEL" != "0.1.0" ]; then
+              if [ "$INITIAL_RELEASE" = "false" ]; then
                 echo "Error: $NAME is not a 1.0.0 or 0.1.0 release" >&2
                 exit 1
               fi
@@ -177,7 +178,12 @@ jobs:
             cargo release commit --no-confirm -x --sign-commit -vv
 
             # Add to results array
-            jq --arg name "$NAME" --arg level "$LEVEL" --arg tag "$NEXT_TAG" --arg version "$NEXT_VERSION" '. += [{"name": $name, "level": $level, "tag": $tag, "version": $version}]' \
+            jq --arg name "$NAME" \
+            --arg level "$LEVEL" \
+            --arg tag "$NEXT_TAG" \
+            --arg version "$NEXT_VERSION" \
+            --arg initial_release "$INITIAL_RELEASE" \
+            '. += [{"name": $name, "level": $level, "tag": $tag, "version": $version, "initial_release": $initial_release}]' \
               /tmp/api-changes.json > /tmp/api-changes.tmp && mv /tmp/api-changes.tmp /tmp/api-changes.json
           done
           
@@ -201,11 +207,12 @@ jobs:
           PR_BODY=$(jq -r --slurpfile api /tmp/api-changes.json '
             .[] | 
             . as $crate |
-            ($api[0] | map(select(.name == $crate.name)) | first // {level: "unknown"}) as $api_info |
+            ($api[0] | map(select(.name == $crate.name)) | first // {level: "skipped because there were no changes to the public API"}) as $api_info |
             "## \($crate.name)\n\n" +
-            "**Next version:** `\($api_info.version)`\n\n" +
+            ($api_info.version != null ? "**Next version:** `\($api_info.version)`\n\n" : "") +
             "**Semver bump:** `\($api_info.level)`\n\n" +
-            "**Tag:** `\($api_info.tag)`\n\n" +
+            ($api_info.tag != null ? "**Tag:** `\($api_info.tag)`\n\n" : "") +
+            ($api_info.initial_release == true ? "**Warning:** this is an initial release. Please verify that the version and commits included are correct.\n\n" : "") +
             ($crate.commits | map("- \(.subject)") | join("\n"))
           ' /tmp/commits-by-crate.json)
           
