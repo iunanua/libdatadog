@@ -46,7 +46,11 @@ jobs:
         with:
           cache-targets: true
       - uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2025-11-01
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
       - uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7 # 2.3.1
         with:
           tool: cargo-public-api@0.50.2
@@ -107,27 +111,6 @@ jobs:
             COMMITS=$(echo "$crate" | jq -r '.commits')
             
             echo "Checking Rust toolchain versions..."
-
-            echo "Nightly rustdoc:"
-            rustup run nightly rustdoc --version
-            
-            echo "Stable rustdoc:"
-            rustup run stable rustdoc --version
-            
-            echo "Nightly cargo semver-checks:"
-            rustup run nightly cargo semver-checks --version
-
-            echo "Stable cargo semver-checks:"
-            rustup run stable cargo semver-checks --version
-            
-            echo "Nightly cargo public-api:"
-            rustup run nightly cargo public-api --version
-            
-            echo "Stable cargo public-api:"
-            rustup run stable cargo public-api --version
-            
-            echo "Rustup show:"
-            rustup show
 
             # if there are no commits, skip the release
             if [ "$COMMITS" = "[]" ]; then
