@@ -191,8 +191,8 @@ jobs:
 
           # Check if there are commits to push
           if git diff --quiet "${{ env.RELEASE_BRANCH }}"; then
-            echo "No changes to push"
-            exit 0
+            echo "No changes to push. Cancelling the workflow."
+            exit 1
           fi
 
           git push origin "$BRANCH_NAME"
