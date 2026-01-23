@@ -256,10 +256,8 @@ jobs:
             (if $api_info.initial_release == "true" then
               "**Warning:** this is an initial release. Please verify that the version and commits included are correct.\n"
             else null end),
-            "### Commits",
-            "",
-            ($crate.commits | map("- \(.subject)") | join("\n"))
-          ] | map(select(. != null)) | join("\n")
+            (if ($crate.commits | length) > 0 then "### Commits\n\n" + ($crate.commits | map("- \(.subject)") | join("\n")) else null end)
+          ] | map(select(. != null and . != "")) | join("\n")
           EOF
 
           PR_BODY=$(jq -r --slurpfile api /tmp/api-changes.json "$JQ_FILTER" /tmp/commits-by-crate.json)
