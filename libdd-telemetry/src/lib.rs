@@ -20,6 +20,7 @@ pub mod worker;
 
 pub fn build_host() -> data::Host {
     debug!("Building telemetry host information");
+    libdd_ddsketch::test();
     let hostname = info::os::real_hostname().unwrap_or_else(|_| String::from("unknown_hostname"));
     let container_id = entity_id::get_container_id().map(|f| f.to_string());
     let os_version = info::os::os_version().ok();
