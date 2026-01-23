@@ -13,6 +13,9 @@ set -euo pipefail
 FORMAT="json"
 VERBOSE=false
 INPUT_JSON=""
+# Default patterns to exclude (one per line, checked with grep -E)
+EXCLUDE_PATTERNS="^Merge branch 
+^Merge pull request "
 
 for arg in "$@"; do
     case "$arg" in
@@ -21,6 +24,15 @@ for arg in "$@"; do
             ;;
         --verbose|-v)
             VERBOSE=true
+            ;;
+        --exclude=*)
+            # Add custom exclude pattern
+            EXCLUDE_PATTERNS="${EXCLUDE_PATTERNS}
+${arg#--exclude=}"
+            ;;
+        --no-exclude)
+            # Disable default excludes
+            EXCLUDE_PATTERNS=""
             ;;
         --help|-h)
             echo "Usage: $0 [OPTIONS] [JSON]"
@@ -31,14 +43,21 @@ for arg in "$@"; do
             echo "  JSON            JSON array of crates (if not provided, reads from stdin)"
             echo ""
             echo "Options:"
-            echo "  --format=FORMAT Output format: json (default), summary"
-            echo "  --verbose, -v   Show verbose output to stderr"
-            echo "  --help, -h      Show this help message"
+            echo "  --format=FORMAT   Output format: json (default), summary"
+            echo "  --exclude=PATTERN Add a regex pattern to exclude commits by subject"
+            echo "  --no-exclude      Disable default exclude patterns"
+            echo "  --verbose, -v     Show verbose output to stderr"
+            echo "  --help, -h        Show this help message"
+            echo ""
+            echo "Default excluded patterns:"
+            echo "  - ^Merge branch "
+            echo "  - ^Merge pull request "
             echo ""
             echo "Examples:"
             echo "  ./publication-order.sh --format=json libdd-common | ./commits-since-release.sh"
             echo "  ./commits-since-release.sh '[{\"name\":\"libdd-common\",\"version\":\"1.0.0\"}]'"
             echo "  ./commits-since-release.sh --format=summary \"\$(./publication-order.sh --format=json)\""
+            echo "  ./commits-since-release.sh --exclude='^chore:' --exclude='^ci:' \"\$JSON\""
             echo ""
             echo "Output JSON format:"
             echo '  [{"name":"crate-name","version":"1.0.0","tag":"crate-name-v1.0.0","tag_exists":true,"commits":[...]}]'
@@ -74,6 +93,23 @@ log_verbose() {
     if [ "$VERBOSE" = true ]; then
         echo "$@" >&2
     fi
+}
+
+# Check if a commit subject should be excluded
+should_exclude() {
+    local subject="$1"
+    if [ -z "$EXCLUDE_PATTERNS" ]; then
+        return 1  # Don't exclude
+    fi
+    
+    # Check each pattern
+    while IFS= read -r pattern; do
+        if [ -n "$pattern" ] && echo "$subject" | grep -qE "$pattern"; then
+            return 0  # Exclude
+        fi
+    done <<< "$EXCLUDE_PATTERNS"
+    
+    return 1  # Don't exclude
 }
 
 # Build output JSON
@@ -134,6 +170,12 @@ while read -r crate; do
             
             while IFS='|' read -r hash subject author date; do
                 if [ -n "$hash" ]; then
+                    # Check if commit should be excluded
+                    if should_exclude "$subject"; then
+                        log_verbose "    Excluding: $subject"
+                        continue
+                    fi
+                    
                     if [ "$COMMIT_FIRST" = true ]; then
                         COMMIT_FIRST=false
                     else
