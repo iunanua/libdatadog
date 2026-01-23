@@ -195,6 +195,8 @@ jobs:
             exit 1
           fi
 
+          BRANCH_NAME="${{ steps.proposal-branch.outputs.branch_name }}"
+          echo "Pushing branch $BRANCH_NAME to origin..."
           git push origin "$BRANCH_NAME"
 
           # Output the results
