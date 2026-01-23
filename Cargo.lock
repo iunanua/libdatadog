@@ -3123,6 +3123,7 @@ dependencies = [
 name = "libdd-ddsketch"
 version = "1.0.0"
 dependencies = [
+ "chrono",
  "prost",
  "prost-build",
  "protoc-bin-vendored",

@@ -302,6 +302,10 @@ fn max(a: f64, b: f64) -> Option<f64> {
     }
 }
 
+pub fn test() {
+    print!("test");
+}
+
 #[cfg(test)]
 mod test {
     use prost::Message;
