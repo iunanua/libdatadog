@@ -107,7 +107,7 @@ jobs:
             CRATE_PATH=$(echo "$crate" | jq -r '.path')
             TAG_EXISTS=$(echo "$crate" | jq -r '.tag_exists')
             COMMITS=$(echo "$crate" | jq -r '.commits')
-            INITIAL_RELEASE=$(echo "$crate" | jq -r '.version == "1.0.0" or .version == "0.1.0"')
+            INITIAL_RELEASE=false
 
             echo "Checking Rust toolchain versions..."
 
@@ -145,10 +145,12 @@ jobs:
               LEVEL=$(echo "$crate" | jq -r '.version')
 
               # fail when the version is not an initial release
-              if [ "$INITIAL_RELEASE" = "false" ]; then
+              if [ "$LEVEL" != "1.0.0" ] && [ "$LEVEL" != "0.1.0" ]; then
                 echo "Error: $NAME is not a 1.0.0 or 0.1.0 release" >&2
                 exit 1
               fi
+
+              INITIAL_RELEASE=true
 
               echo "Executing cargo release for $NAME with level $LEVEL..."
               cargo release version -p "$NAME" -x $LEVEL --no-confirm
@@ -204,17 +206,29 @@ jobs:
           fi
           
           # Generate the PR body by merging commits and API changes
-          PR_BODY=$(jq -r --slurpfile api /tmp/api-changes.json '
-            .[] | 
-            . as $crate |
-            ($api[0] | map(select(.name == $crate.name)) | first // {level: "skipped because there were no changes to the public API"}) as $api_info |
-            "## \($crate.name)\n\n" +
-            ($api_info.version != null ? "**Next version:** `\($api_info.version)`\n\n" : "") +
-            "**Semver bump:** `\($api_info.level)`\n\n" +
-            ($api_info.tag != null ? "**Tag:** `\($api_info.tag)`\n\n" : "") +
-            ($api_info.initial_release == true ? "**Warning:** this is an initial release. Please verify that the version and commits included are correct.\n\n" : "") +
+          read -r -d '' JQ_FILTER << 'EOF'
+          .[] |
+          . as $crate |
+          ($api[0] | map(select(.name == $crate.name)) | first // {
+            level: "skipped because there were no changes to the public API"
+          }) as $api_info |
+          [
+            "## \($crate.name)",
+            "",
+            (if $api_info.version then "**Next version:** `\($api_info.version)`\n" else null end),
+            "**Semver bump:** `\($api_info.level)`",
+            "",
+            (if $api_info.tag then "**Tag:** `\($api_info.tag)`\n" else null end),
+            (if $api_info.initial_release == "true" then
+              "**Warning:** this is an initial release. Please verify that the version and commits included are correct.\n"
+            else null end),
+            "### Commits",
+            "",
             ($crate.commits | map("- \(.subject)") | join("\n"))
-          ' /tmp/commits-by-crate.json)
+          ] | map(select(. != null)) | join("\n")
+          EOF
+          
+          PR_BODY=$(jq -r --slurpfile api /tmp/api-changes.json "$JQ_FILTER" /tmp/commits-by-crate.json)
           
           PR_BODY="# Release proposal for ${{ inputs.crate }} and its dependencies
 
