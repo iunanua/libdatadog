@@ -1,6 +1,14 @@
 # Changelog
 
 
+
+## [3.0.0](https://github.com/datadog/libdatadog/compare/libdd-telemetry-v2.0.0..libdd-telemetry-v3.0.0) - 2026-01-23
+
+### Added
+
+- *(appsec)* Add endpoints collection ([#1182](https://github.com/datadog/libdatadog/issues/1182)) - ([44cabf1](https://github.com/datadog/libdatadog/commit/44cabf193fd0bde789b53be2a91bcce7ebce3fe7))
+
+
 ## [2.0.0](https://github.com/datadog/libdatadog/compare/libdd-telemetry-v1.0.0..libdd-telemetry-v2.0.0) - 2026-01-20
 
 ### Added
