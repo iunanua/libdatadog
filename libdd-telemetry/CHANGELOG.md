@@ -2,6 +2,14 @@
 
 
 
+## [3.0.1](https://github.com/datadog/libdatadog/compare/libdd-telemetry-v3.0.0..libdd-telemetry-v3.0.1) - 2026-01-26
+
+### Changed
+
+- DROP - telemetry use libdd_ddsketch::test() - ([69da842](https://github.com/datadog/libdatadog/commit/69da842608a7c6ca013da8a6232544853f04a689))
+
+
+
 ## [3.0.0](https://github.com/datadog/libdatadog/compare/libdd-telemetry-v2.0.0..libdd-telemetry-v3.0.0) - 2026-01-23
 
 ### Added
