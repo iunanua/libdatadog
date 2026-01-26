@@ -147,6 +147,8 @@ jobs:
           # Initialize results array
           echo "[]" > /tmp/api-changes.json
 
+          BRANCH_NAME="${{ steps.proposal-branch.outputs.branch_name }}"
+
           # iterate over the commits and execute cargo release for each crate
           jq -c '.[]' /tmp/commits-by-crate.json | while read -r crate; do
             NAME=$(echo "$crate" | jq -r '.name')
@@ -189,7 +191,7 @@ jobs:
               LEVEL=$(echo "$SEMVER_LEVEL" | jq -r '.level')
 
               echo "Executing cargo release for $NAME since $TAG with level $LEVEL..."
-              cargo release version -p "$NAME" --prev-tag-name "$TAG" -x $LEVEL --no-confirm
+              cargo release version -p "$NAME" --prev-tag-name "$TAG" --allow-branch "$BRANCH_NAME" -x $LEVEL --no-confirm
             else
               RANGE="$ORIGINAL_HEAD"
               echo "No previous release tag for $NAME, using $ORIGINAL_HEAD as range"
@@ -248,7 +250,6 @@ jobs:
             exit 1
           fi
 
-          BRANCH_NAME="${{ steps.proposal-branch.outputs.branch_name }}"
           echo "Pushing branch $BRANCH_NAME to origin..."
           git push origin "$BRANCH_NAME"
 
