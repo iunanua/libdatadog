@@ -98,6 +98,17 @@ jobs:
       - uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7 # 2.3.1
         with:
           tool: cargo-semver-checks@0.45.0
+      
+      - name: Configure Git for signing
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global commit.gpgsign true
+
+          echo "Git config:"
+          git config --list | grep -E "(user|commit|gpg)"
+          echo "Gitsign version:"
+          gitsign version || echo "gitsign not found"
 
       - name: Get publication order for crate and dependencies
         run: |
@@ -126,12 +137,6 @@ jobs:
           git push origin "$BRANCH_NAME"
           echo "Branch created: $BRANCH_NAME from ${{ env.RELEASE_BRANCH }} branch"
           echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
-      
-      - name: Configure Git for signing
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global commit.gpgsign true
           
       - name: Release version bumps
         id: release-version-bumps
