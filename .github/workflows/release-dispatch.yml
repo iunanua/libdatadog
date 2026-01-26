@@ -62,7 +62,13 @@ jobs:
           git fetch origin "${{ env.RELEASE_BRANCH }}" --tags
           git checkout "${{ env.RELEASE_BRANCH }}"
           # only fast-forward the merge
-          git merge --ff-only origin/"${{ env.MAIN_BRANCH }}"
+          if ! git merge --ff-only origin/"${{ env.MAIN_BRANCH }}"; then
+            echo "Error: Cannot fast-forward merge ${{ env.MAIN_BRANCH }} into ${{ env.RELEASE_BRANCH }}" >&2
+            echo "The branches have diverged." >&2
+            echo "If you have recently launched another release, it is possible that ${{ env.MAIN_BRANCH }} branch is not yet updated with the ${{ env.RELEASE_BRANCH }} changes." >&2
+            echo "Please try again later." >&2
+            exit 1
+          fi
           git push origin "${{ env.RELEASE_BRANCH }}" --tags
   
   cargo-release:
