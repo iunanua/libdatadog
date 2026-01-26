@@ -216,6 +216,10 @@ pub fn test_common(hello: &str) {
     println!("test_common ${hello} ${u}");
 }
 
+pub fn test_common_2() {
+    println!("test_common 2");
+}
+
 fn encode_uri_path_in_authority(scheme: &str, path: &str) -> anyhow::Result<hyper::Uri> {
     let mut parts = uri::Parts::default();
     parts.scheme = uri::Scheme::from_str(scheme).ok();
