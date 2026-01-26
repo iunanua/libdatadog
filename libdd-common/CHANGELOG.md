@@ -2,6 +2,10 @@
 
 
 
+## [4.0.0](https://github.com/datadog/libdatadog/compare/libdd-common-v3.0.0..libdd-common-v4.0.0) - 2026-01-26
+
+
+
 ## [3.0.0](https://github.com/datadog/libdatadog/compare/libdd-common-v2.1.0..libdd-common-v3.0.0) - 2026-01-26
 
 ### Changed
