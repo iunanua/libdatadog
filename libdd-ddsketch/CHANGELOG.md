@@ -2,6 +2,14 @@
 
 
 
+## [1.1.0](https://github.com/datadog/libdatadog/compare/libdd-ddsketch-v1.0.1..libdd-ddsketch-v1.1.0) - 2026-01-26
+
+### Changed
+
+- DROP - ddsketch dep and public api - ([df3039c](https://github.com/datadog/libdatadog/commit/df3039c25f64575a00b4ec0b1b04ec1cd53196b2))
+
+
+
 ## [1.0.1](https://github.com/datadog/libdatadog/compare/libdd-ddsketch-v1.0.0..libdd-ddsketch-v1.0.1) - 2026-01-23
 
 ### Changed
