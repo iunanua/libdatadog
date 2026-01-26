@@ -216,7 +216,7 @@ jobs:
             git add "$CRATE_PATH/CHANGELOG.md"
 
             # Commit the changes
-            cargo release commit --no-confirm -x --sign-commit -vv
+            cargo release commit --no-confirm -x
 
             # Add to results array
             jq --arg name "$NAME" \
