@@ -145,6 +145,7 @@ jobs:
           jq -c '.[]' /tmp/commits-by-crate.json | while read -r crate; do
             NAME=$(echo "$crate" | jq -r '.name')
             TAG=$(echo "$crate" | jq -r '.tag')
+            TAG_PREFIX="$NAME-v"
             CRATE_PATH=$(echo "$crate" | jq -r '.path')
             TAG_EXISTS=$(echo "$crate" | jq -r '.tag_exists')
             COMMITS=$(echo "$crate" | jq -r '.commits')
@@ -160,12 +161,19 @@ jobs:
               RANGE="$TAG..$ORIGINAL_HEAD"
               echo "Using $RANGE as range"
 
-              # TODO: Should we skip the release if the tag is not in the branch?
               echo "Is the tag $TAG in the branch:"
               git branch --contains "$TAG"
               if [ $? -ne 0 ]; then
                 echo "Error: Tag $TAG is not in the branch" >&2
                 exit 1
+              fi
+
+              # if there is a tag more recent than $TAG, continue the loop
+              LATEST_TAG=$(git tag -l "$TAG_PREFIX*" --sort=-v:refname | head -1)
+              if [ "$LATEST_TAG" != "$TAG" ]; then
+                echo "Tag $TAG is not the latest. Latest is: $LATEST_TAG. main branch has the latest release for $NAME"
+                echo "Skipping release for $NAME"
+                continue
               fi
 
               echo "Executing semver-level.sh for $NAME since $RANGE..."
@@ -203,7 +211,7 @@ jobs:
             
             # Update the CHANGELOG.md
             NEXT_VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r --arg name "$NAME" '.packages[] | select(.name == $name) | .version')
-            NEXT_TAG="$NAME-v$NEXT_VERSION"
+            NEXT_TAG="$TAG_PREFIX$NEXT_VERSION"
 
             # Check what commits git sees in the range
             echo "Commits in the range $RANGE:"
@@ -212,7 +220,7 @@ jobs:
             echo "Executing git cliff for $NAME since $RANGE, next tag: $NEXT_TAG..."
               
             # It seems that git cliff does not like to use tags that are not on the branch
-            git cliff --tag "$NEXT_TAG" --include-path "$CRATE_PATH/**/*" --prepend "$CRATE_PATH/CHANGELOG.md" --tag-pattern "$NAME-v.*" -u -v "$RANGE"
+            git cliff --tag "$NEXT_TAG" --include-path "$CRATE_PATH/**/*" --prepend "$CRATE_PATH/CHANGELOG.md" --tag-pattern "$TAG_PREFIX.*" -u -v "$RANGE"
             git add "$CRATE_PATH/CHANGELOG.md"
 
             # Commit the changes
