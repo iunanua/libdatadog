@@ -93,6 +93,7 @@ commit_parsers = [
   { message = "^chore\\(pr\\)", skip = true },
   { message = "^chore\\(pull\\)", skip = true },
   { message = "^chore\\(npm\\).*yarn\\.lock", skip = true },
+  { message = "^Merge branch", skip = true },
   { message = ".*", group = "<!-- B -->Changed" },
 ]
 # Prevent commits that are breaking from being excluded by commit parsers.

@@ -146,8 +146,6 @@ jobs:
             COMMITS=$(echo "$crate" | jq -r '.commits')
             INITIAL_RELEASE=false
 
-            echo "Checking Rust toolchain versions..."
-
             # if there are no commits, skip the release
             if [ "$COMMITS" = "[]" ]; then
               echo "No commits since last release for $NAME, skipping release"
