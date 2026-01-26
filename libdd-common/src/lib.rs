@@ -10,6 +10,7 @@ use hyper::{
     header::HeaderValue,
     http::uri::{self},
 };
+use rand::SeedableRng;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::sync::{Mutex, MutexGuard};
@@ -208,8 +209,11 @@ pub fn parse_uri(uri: &str) -> anyhow::Result<hyper::Uri> {
     }
 }
 
-pub fn test_common() {
-    println!("test_common");
+pub fn test_common(hello: &str) {
+    use rand::RngCore;
+    let mut rng = rand::rngs::SmallRng::from_entropy();
+    let u = rng.next_u64();
+    println!("test_common ${hello} ${u}");
 }
 
 fn encode_uri_path_in_authority(scheme: &str, path: &str) -> anyhow::Result<hyper::Uri> {
