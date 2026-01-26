@@ -101,13 +101,7 @@ jobs:
       - name: Configure Git for signing
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global commit.gpgsign true
-
-          echo "Git config:"
-          git config --list | grep -E "(user|commit|gpg)"
-          echo "Gitsign version:"
-          gitsign version || echo "gitsign not found"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Get publication order for crate and dependencies
         run: |
