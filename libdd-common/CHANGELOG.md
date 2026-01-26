@@ -2,6 +2,14 @@
 
 
 
+## [2.1.0](https://github.com/datadog/libdatadog/compare/libdd-common-v2.0.0..libdd-common-v2.1.0) - 2026-01-26
+
+### Changed
+
+- DROP - test common 3 - ([b589d73](https://github.com/datadog/libdatadog/commit/b589d7360b828d955c213702e369f254d7f4ee0b))
+
+
+
 ## [2.0.0](https://github.com/datadog/libdatadog/compare/libdd-common-v1.2.0..libdd-common-v2.0.0) - 2026-01-26
 
 ### Changed
