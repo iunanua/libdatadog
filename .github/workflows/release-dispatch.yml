@@ -251,6 +251,13 @@ jobs:
             /tmp/api-changes.json
           retention-days: 1
 
+      - name: Cleanup on failure
+        if: failure() && steps.proposal-branch.outputs.branch_name != ''
+        run: |
+          BRANCH_NAME="${{ steps.proposal-branch.outputs.branch_name }}"
+          echo "Job failed, deleting branch $BRANCH_NAME..."
+          git push origin --delete "$BRANCH_NAME" || echo "Failed to delete branch (may not exist on remote)"
+
     outputs:
       branch_name: ${{ steps.proposal-branch.outputs.branch_name }}
 
