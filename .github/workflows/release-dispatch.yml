@@ -190,8 +190,12 @@ jobs:
 
               LEVEL=$(echo "$SEMVER_LEVEL" | jq -r '.level')
 
+              # TODO: cargo release warns if there are no changes to the public API
+              # warning: updating crate to 4.0.1 despite no changes made since tag crate-v4.0.0
+              # Should we skip the release if there are no changes to the public API?
               echo "Executing cargo release for $NAME since $TAG with level $LEVEL..."
               cargo release version -p "$NAME" --prev-tag-name "$TAG" --allow-branch "$BRANCH_NAME" -x $LEVEL --no-confirm
+
             else
               RANGE="$ORIGINAL_HEAD"
               echo "No previous release tag for $NAME, using $ORIGINAL_HEAD as range"
