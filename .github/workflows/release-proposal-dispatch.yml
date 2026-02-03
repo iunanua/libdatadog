@@ -24,6 +24,10 @@ on:
           - libdd-trace-stats
           - libdd-trace-utils
 
+concurrency:
+  group: release-proposal-dispatch-group
+  cancel-in-progress: false
+
 env:
   MAIN_BRANCH: main
   RELEASE_BRANCH: release
@@ -123,8 +127,8 @@ jobs:
           # Get commits since release for each crate and save to file
           ./scripts/commits-since-release.sh "$(cat /tmp/crates.json)" > /tmp/commits-by-crate.json
           
-          # Display summary
-          ./scripts/commits-since-release.sh --format=summary "$(cat /tmp/crates.json)"
+          # Display json output
+          jq . /tmp/commits-by-crate.json
 
       - name: Create a branch for the release proposal
         id: proposal-branch
@@ -170,11 +174,10 @@ jobs:
               echo "Using $RANGE as range"
 
               echo "Is the tag $TAG in the branch:"
-              git branch --contains "$TAG"
-              if [ $? -ne 0 ]; then
+              git branch --contains "$TAG" || {
                 echo "Error: Tag $TAG is not in the branch" >&2
                 exit 1
-              fi
+              }
 
               # if there is a tag more recent than $TAG, continue the loop
               LATEST_TAG=$(git tag -l "$TAG_PREFIX*" --sort=-v:refname | head -1)
@@ -259,7 +262,7 @@ jobs:
 
           # Output the results
           echo "API changes summary:"
-          cat /tmp/api-changes.json | jq .
+          jq . /tmp/api-changes.json
 
       - name: Upload release data
         uses: actions/upload-artifact@v4
