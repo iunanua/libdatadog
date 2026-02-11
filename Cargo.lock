@@ -3291,7 +3291,7 @@ name = "libdd-telemetry"
 version = "2.3.0"
 dependencies = [
  "anyhow",
- "base64 0.22.1",
+ "base64 0.21.7",
  "futures",
  "hashbrown 0.15.1",
  "http",

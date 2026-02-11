@@ -52,3 +52,7 @@ pub fn build_host() -> data::Host {
 pub fn epa() {
     println!("epa");
 }
+
+pub fn epale() {
+    println!("epale");
+}
