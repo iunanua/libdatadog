@@ -176,11 +176,6 @@ fn generate_protobuf() {
         "ClientGroupedStats.HTTP_endpoint",
         "#[serde(default)] #[serde(rename = \"HTTPEndpoint\")]",
     );
-    config.field_attribute("ClientGroupedStats.service_source", "#[serde(default)]");
-    config.field_attribute(
-        "ClientGroupedStats.span_derived_primary_tags",
-        "#[serde(default)]",
-    );
 
     config.field_attribute(
         "ClientGroupedStats.okSummary",

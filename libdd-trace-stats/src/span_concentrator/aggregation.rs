@@ -404,8 +404,6 @@ fn encode_grouped_stats(key: OwnedAggregationKey, group: GroupedStats) -> pb::Cl
             .grpc_status_code
             .map(|c| c.to_string())
             .unwrap_or_default(),
-        service_source: String::new(),     // set by the agent
-        span_derived_primary_tags: vec![], // Todo
     }
 }
 
