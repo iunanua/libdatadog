@@ -234,14 +234,14 @@ jobs:
 
           BRANCH_NAME="${{ steps.proposal-branch.outputs.branch_name }}"
 
-          # iterate over the commits and execute cargo release for each crate
-          jq -c '.[]' /tmp/commits-by-crate.json | while read -r crate; do
+          # Process substitution (not jq|while) so exit 1 fails the step; jq -c .commits keeps valid JSON
+          while IFS= read -r crate; do
             NAME=$(echo "$crate" | jq -r '.name')
             TAG=$(echo "$crate" | jq -r '.tag')
             TAG_PREFIX="$NAME-v"
             CRATE_PATH=$(echo "$crate" | jq -r '.path')
             TAG_EXISTS=$(echo "$crate" | jq -r '.tag_exists')
-            COMMITS=$(echo "$crate" | jq -r '.commits')
+            COMMITS=$(echo "$crate" | jq -c '.commits')
             INITIAL_RELEASE=false
 
             # if there are no commits, skip the release
@@ -301,7 +301,8 @@ jobs:
               fi
 
               echo "Executing semver-level.sh for $NAME since $RANGE (tag: $TAG)..."
-              SEMVER_LEVEL=$(./scripts/semver-level.sh "$NAME" "refs/tags/$TAG" 2>&1)
+              # Do not merge stderr into capture (tool output breaks jq)
+              SEMVER_LEVEL=$(./scripts/semver-level.sh "$NAME" "refs/tags/$TAG")
               echo "Semver level: $SEMVER_LEVEL"
 
               LEVEL=$(echo "$SEMVER_LEVEL" | jq -r '.level')
@@ -384,7 +385,7 @@ jobs:
             --arg initial_release "$INITIAL_RELEASE" \
             '. += [{"name": $name, "level": $level, "tag": $tag, "version": $version, "initial_release": $initial_release}]' \
               /tmp/api-changes.json > /tmp/api-changes.tmp && mv /tmp/api-changes.tmp /tmp/api-changes.json
-          done
+          done < <(jq -c '.[]' /tmp/commits-by-crate.json)
 
           # Check if there are commits to push
           if git diff --quiet "${{ env.RELEASE_BRANCH }}"; then
@@ -409,7 +410,7 @@ jobs:
           echo "[]" > /tmp/dependents-changes.json
 
           # iterate /tmp/api-changes.json and check if the level is major, if so, check the dependents
-          jq -c '.[]' /tmp/api-changes.json | while read -r crate; do
+          while IFS= read -r crate; do
             LEVEL=$(echo "$crate" | jq -r '.level')
             NAME=$(echo "$crate" | jq -r '.name')
             if [ "$LEVEL" != "major" ]; then
@@ -420,9 +421,12 @@ jobs:
             
             # Packages that depend on $NAME (dependents), not packages $NAME depends on (dependencies)
             # Exclude packages with publish = false (cargo metadata exposes that as .publish == [])
-            DEPENDENTS=$(echo "$METADATA" | jq -r --arg name "$NAME" '.packages[] | select(.name != $name) | select(.publish == null or (.publish | type == "array" and length > 0)) | select(any(.dependencies[]?; .name == $name))')
-            
-            for dependent in $DEPENDENTS; do
+            # One compact JSON object per line (safe for iteration; do not use "for x in $DEPENDENTS").
+            DEPENDENTS=$(echo "$METADATA" | jq -c --arg name "$NAME" '.packages[] | select(.name != $name) | select(.publish == null or (.publish | type == "array" and length > 0)) | select(any(.dependencies[]?; .name == $name))')
+            echo "DEPENDENTS: $DEPENDENTS" >&2
+
+            while IFS= read -r dependent; do
+              [ -n "$dependent" ] || continue
               DEPENDENT_NAME=$(echo "$dependent" | jq -r '.name')
               # if DEPENDENT is not in /tmp/api-changes.json, bump a patch release
               if ! jq -e --arg name "$DEPENDENT_NAME" '.[] | select(.name == $name)' /tmp/api-changes.json > /dev/null; then
@@ -459,18 +463,18 @@ jobs:
               else
                 echo "Dependency $DEPENDENT_NAME is already in the release proposal"
               fi
-            done
+            done <<< "$DEPENDENTS"
 
-            # merge /tmp/dependents-changes.json into /tmp/api-changes.json
+            # merge /tmp/dependents-changes.json into /tmp/api-changes.json (both are JSON arrays)
             jq --slurpfile dependents /tmp/dependents-changes.json \
-              '.[0] + $dependents[0]' \
+              '. + $dependents[0]' \
               /tmp/api-changes.json > /tmp/api-changes.tmp && mv /tmp/api-changes.tmp /tmp/api-changes.json
 
             # Output the results
             echo "API changes summary after adding dependents changes:"
             jq . /tmp/api-changes.json
             
-          done
+          done < <(jq -c '.[]' /tmp/api-changes.json)
   
       - name: Upload release data
         uses: actions/upload-artifact@v4
