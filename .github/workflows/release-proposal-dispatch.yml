@@ -444,8 +444,7 @@ jobs:
                 echo "Bumping $DEPENDENT_NAME (tag: $DEPENDENT_PREV_TAG) to patch release as it is a dependent of a major change of $NAME"
 
                 # check if the dependent crate has have changes since the last release
-                
-                COMMITS=$(./scripts/commits-since-release.sh "$dependent" | jq -c --arg name "$DEPENDENT_NAME" '.[] | select(.name == $name) | .commits')
+                COMMITS=$(./scripts/commits-since-release.sh "[$dependent]" | jq -c --arg name "$DEPENDENT_NAME" '.[] | select(.name == $name) | .commits')
                 echo "COMMITS: $COMMITS" >&2
                 
                 # if there are no commits release a patch
