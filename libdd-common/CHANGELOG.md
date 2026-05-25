@@ -2,6 +2,14 @@
 
 
 
+## [4.2.0](https://github.com/datadog/libdatadog/compare/libdd-common-v4.1.0..libdd-common-v4.2.0) - 2026-05-25
+
+### Added
+
+- Rename get_agent_info to current_agent_info - ([8eb8e8a](https://github.com/datadog/libdatadog/commit/8eb8e8abb0fca8659d88cc7d9542cad44e9d3e46))
+
+
+
 ## [4.1.0](https://github.com/datadog/libdatadog/compare/libdd-common-v4.0.0..libdd-common-v4.1.0) - 2026-05-15
 
 ### Added
