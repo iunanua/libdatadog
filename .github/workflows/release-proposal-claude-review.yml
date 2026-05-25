@@ -1,4 +1,4 @@
-name: Release - Alternative PR with verified major bumps by Claude
+name: Release - Alternative release proposal PR by Claude
 
 # Always runs after release-proposal-dispatch.yml completes. Reads the
 # `release-dispatch-data` artifact uploaded by that workflow, asks
@@ -35,13 +35,13 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Skip when artifact missing
-        if: hashFiles('/tmp/release-metadata.json') == ''
+        if: steps.download.outcome != 'success'
         run: |
           echo "release-dispatch-data artifact not available (dispatch likely failed before uploading). Nothing to do."
 
       - name: Load metadata
         id: meta
-        if: hashFiles('/tmp/release-metadata.json') != ''
+        if: steps.download.outcome == 'success'
         run: |
           set -euo pipefail
           META=/tmp/release-metadata.json
