@@ -1,0 +1,260 @@
+name: Release - Alternative PR with verified major bumps by Claude
+
+# Always runs after release-proposal-dispatch.yml completes. Reads the
+# `release-dispatch-data` artifact uploaded by that workflow, asks
+# scripts/breaking-change-bumps.sh which crates actually need a major bump,
+# and (when there are any) opens an alternative PR stacked on top of the
+# release proposal branch with the additional version bumps.
+on:
+  workflow_run:
+    workflows: ["Release - Open a release proposal PR"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  create-pr-alternative:
+    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      pull-requests: write
+      contents: write
+      actions: read
+    steps:
+      - name: Download release data
+        id: download
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: release-dispatch-data
+          path: /tmp
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Skip when artifact missing
+        if: hashFiles('/tmp/release-metadata.json') == ''
+        run: |
+          echo "release-dispatch-data artifact not available (dispatch likely failed before uploading). Nothing to do."
+
+      - name: Load metadata
+        id: meta
+        if: hashFiles('/tmp/release-metadata.json') != ''
+        run: |
+          set -euo pipefail
+          META=/tmp/release-metadata.json
+          echo "Release metadata:"
+          cat "$META"
+          {
+            echo "crates=$(jq -r '.crates' "$META")"
+            echo "crates_display=$(jq -r '.crates_display' "$META")"
+            echo "crates_branch=$(jq -r '.crates_branch' "$META")"
+            echo "count=$(jq -r '.count' "$META")"
+            echo "branch_name=$(jq -r '.branch_name' "$META")"
+            echo "ephemeral_branch=$(jq -r '.ephemeral_branch' "$META")"
+            echo "is_hotfix=$(jq -r '.is_hotfix' "$META")"
+            echo "bypass_standard_checks=$(jq -r '.bypass_standard_checks' "$META")"
+            echo "proposal_branch_prefix=$(jq -r '.proposal_branch_prefix' "$META")"
+            echo "release_branch_prefix=$(jq -r '.release_branch_prefix' "$META")"
+            echo "main_branch=$(jq -r '.main_branch' "$META")"
+            echo "workflow_sha=$(jq -r '.workflow_sha' "$META")"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+        if: steps.meta.outputs.branch_name != ''
+        with:
+          ref: ${{ steps.meta.outputs.branch_name }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Snapshot scripts from dispatch workflow revision
+        if: steps.meta.outputs.workflow_sha != ''
+        run: |
+          set -euo pipefail
+          WF_SHA="${{ steps.meta.outputs.workflow_sha }}"
+          git fetch --no-tags origin "$WF_SHA" 2>/dev/null || true
+          if ! git rev-parse -q --verify "${WF_SHA}^{commit}" >/dev/null; then
+            echo "Error: could not resolve dispatch workflow revision ${WF_SHA}." >&2
+            exit 1
+          fi
+          DEST="/tmp/workflow-scripts-libdatadog-alt"
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
+          git archive "$WF_SHA" scripts | tar -x -C "$DEST"
+          echo "WORKFLOW_SCRIPTS_ROOT=${DEST}/scripts" >> "$GITHUB_ENV"
+
+      - name: Identify crates needing a verified major bump
+        if: steps.meta.outputs.branch_name != ''
+        id: identify
+        run: |
+          set -euo pipefail
+          "${WORKFLOW_SCRIPTS_ROOT}/breaking-change-bumps.sh" /tmp/api-changes-with-major-bumps.json > /tmp/breaking-bumps.json
+          echo "Verified breaking-change bumps:"
+          jq . /tmp/breaking-bumps.json
+          COUNT=$(jq 'length' /tmp/breaking-bumps.json)
+          if [ "$COUNT" -gt 0 ]; then
+            REVIEW_NEEDED=true
+          else
+            REVIEW_NEEDED=false
+          fi
+          {
+            echo "count=$COUNT"
+            echo "review_needed=$REVIEW_NEEDED"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Nothing to bump
+        if: steps.identify.outputs.review_needed == 'false'
+        run: echo "No verified breaking-change major bumps required; nothing to do."
+
+      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
+        if: steps.identify.outputs.review_needed == 'true'
+        with:
+          cache-targets: true
+      - uses: dtolnay/rust-toolchain@stable
+        if: steps.identify.outputs.review_needed == 'true'
+        with:
+          toolchain: 1.92.0
+      - uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7 # 2.3.1
+        if: steps.identify.outputs.review_needed == 'true'
+        with:
+          tool: cargo-release
+
+      - uses: DataDog/dd-octo-sts-action@acaa02eee7e3bb0839e4272dacb37b8f3b58ba80 # v1.0.3
+        if: steps.identify.outputs.review_needed == 'true'
+        id: octo-sts
+        with:
+          scope: DataDog/libdatadog
+          policy: self.write.pr
+
+      # - name: Configure Git for signing
+      #   if: steps.identify.outputs.review_needed == 'true'
+      #   env:
+      #     GH_TOKEN: ${{ steps.octo-sts.outputs.token }}
+      #     GITHUB_ACTOR: ${{ github.event.workflow_run.actor.login }}
+      #   run: |
+      #     GITHUB_USER_RESPONSE=$(curl -s -H "Authorization: token ${GH_TOKEN}" "https://api.github.com/users/${GITHUB_ACTOR}")
+      #     GIT_USER_NAME=$(echo "${GITHUB_USER_RESPONSE}" | jq -r '.login // empty')
+      #     GIT_USER_ID=$(echo "${GITHUB_USER_RESPONSE}" | jq -r '.id // empty')
+      #     if [[ -z "$GIT_USER_NAME" ]]; then
+      #       GIT_USER_NAME="${GITHUB_ACTOR}"
+      #       GIT_USER_EMAIL="${GITHUB_ACTOR}@users.noreply.github.com"
+      #     else
+      #       GIT_USER_EMAIL="${GIT_USER_ID}+${GIT_USER_NAME}@users.noreply.github.com"
+      #     fi
+      #     echo "GIT_USER_NAME: $GIT_USER_NAME"
+      #     echo "GIT_USER_EMAIL: $GIT_USER_EMAIL"
+      #     git config --global user.name "$GIT_USER_NAME"
+      #     git config --global user.email "$GIT_USER_EMAIL"
+
+      - name: Configure Git for signing
+        if: steps.identify.outputs.review_needed == 'true'
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          
+          GIT_USER_NAME="${GITHUB_ACTOR}"
+          GIT_USER_EMAIL="${GITHUB_ACTOR}@users.noreply.github.com"
+          
+          echo "GIT_USER_NAME: $GIT_USER_NAME"
+          echo "GIT_USER_EMAIL: $GIT_USER_EMAIL"
+          git config --global user.name "$GIT_USER_NAME"
+          git config --global user.email "$GIT_USER_EMAIL"
+
+      - name: Create alternative branch and apply major bumps
+        if: steps.identify.outputs.review_needed == 'true'
+        id: alt-branch
+        env:
+          PROPOSAL_BRANCH_PREFIX: ${{ steps.meta.outputs.proposal_branch_prefix }}
+          CRATES_BRANCH: ${{ steps.meta.outputs.crates_branch }}
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          ALT_BRANCH="${PROPOSAL_BRANCH_PREFIX}/${CRATES_BRANCH}/${TIMESTAMP}-alternative"
+
+          BASE_SHA=$(git rev-parse HEAD)
+          git checkout -b "$ALT_BRANCH"
+
+          jq -c '.[]' /tmp/breaking-bumps.json | while read -r row; do
+            NAME=$(echo "$row" | jq -r '.name')
+            PREV_TAG=$(echo "$row" | jq -r '.prev_tag // empty')
+            echo "Applying major bump for $NAME (prev_tag=${PREV_TAG:-<none>})..."
+            if [ -n "$PREV_TAG" ]; then
+              cargo release version -p "$NAME" --prev-tag-name "$PREV_TAG" --allow-branch "$ALT_BRANCH" -x major --no-confirm
+            else
+              cargo release version -p "$NAME" --allow-branch "$ALT_BRANCH" -x major --no-confirm
+            fi
+            git commit -am "chore(release): promote $NAME to major due to breaking-change commits"
+          done
+
+          if git diff --quiet "$BASE_SHA" HEAD; then
+            echo "No commits produced after bumping; aborting." >&2
+            exit 1
+          fi
+
+          # Oldest → newest, matching cargo-release's commit-headless ordering.
+          COMMITS=$(git log --reverse "$BASE_SHA"..HEAD --format='%H' | tr '\n' ' ' | xargs)
+          echo "alt_branch=$ALT_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
+          echo "commits=$COMMITS" >> "$GITHUB_OUTPUT"
+
+      - name: Push alternative commits
+        if: steps.identify.outputs.review_needed == 'true'
+        uses: DataDog/commit-headless@action/v2.0.3
+        with:
+          branch: ${{ steps.alt-branch.outputs.alt_branch }}
+          head-sha: ${{ steps.alt-branch.outputs.base_sha }}
+          command: push
+          commits: "${{ steps.alt-branch.outputs.commits }}"
+
+      - name: Create alternative PR
+        if: steps.identify.outputs.review_needed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.octo-sts.outputs.token }}
+          PROPOSAL_BRANCH: ${{ steps.meta.outputs.branch_name }}
+          ALT_BRANCH: ${{ steps.alt-branch.outputs.alt_branch }}
+          CRATES_DISPLAY: ${{ steps.meta.outputs.crates_display }}
+        run: |
+          set -euo pipefail
+          read -r -d '' JQ_FILTER << 'EOF' || true
+          [ $bumps[0][]
+            | "## \(.name)\n\n"
+              + "**Previous tag:** `\(.prev_tag // "n/a")`\n"
+              + "**Previous level:** `\(.level)`\n"
+              + "**Promoted to:** `major`\n"
+              + (if (.commits // [] | length) > 0
+                 then "\n### Breaking-change commits\n\n" + (.commits | map("- \(.subject)") | join("\n"))
+                 else "" end)
+          ]
+          | join("\n\n")
+          EOF
+          BUMPS_BODY=$(jq -nr --slurpfile bumps /tmp/breaking-bumps.json "$JQ_FILTER")
+
+          PR_BODY="# Alternative to \`$PROPOSAL_BRANCH\` with verified breaking-change major bumps
+
+          The breaking-change verifier (\`scripts/breaking-change-bumps.sh\`) flagged the crates below as needing a major bump that the main proposal did not apply. This PR is stacked on top of the release proposal and is intended to be merged together with it.
+
+          ${BUMPS_BODY}"
+
+          echo "$PR_BODY" > /tmp/alt-pr-body.md
+
+          gh pr create \
+            --head "$ALT_BRANCH" \
+            --title "chore(release): alternative proposal with major bumps for $CRATES_DISPLAY" \
+            --body-file /tmp/alt-pr-body.md \
+            --label "release-proposal" \
+            --label "skip-metadata-check" \
+            --label "skip-changelog-check" \
+            --label "skip-pr-title-semver-check" \
+            --base "$PROPOSAL_BRANCH" \
+            --draft
+
+      - name: Cleanup on failure
+        if: failure() && steps.alt-branch.outputs.alt_branch != ''
+        run: |
+          ALT_BRANCH="${{ steps.alt-branch.outputs.alt_branch }}"
+          if [ -n "$ALT_BRANCH" ]; then
+            echo "Job failed, deleting alternative branch $ALT_BRANCH..."
+            git push origin --delete "$ALT_BRANCH" || echo "Failed to delete alternative branch (may not exist on remote)"
+          fi
