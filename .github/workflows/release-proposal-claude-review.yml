@@ -1,4 +1,4 @@
-name: Release - Create alternative PR with verified major bumps
+name: Release - Alternative PR with verified major bumps by Claude
 
 # Always runs after release-proposal-dispatch.yml completes. Reads the
 # `release-dispatch-data` artifact uploaded by that workflow, asks
@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   create-pr-alternative:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write

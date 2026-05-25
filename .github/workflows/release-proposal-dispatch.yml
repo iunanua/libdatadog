@@ -827,15 +827,16 @@ jobs:
           name: release-dispatch-data
           path: /tmp
 
-      - uses: DataDog/dd-octo-sts-action@acaa02eee7e3bb0839e4272dacb37b8f3b58ba80 # v1.0.3
-        id: octo-sts
-        with:
-          scope: DataDog/libdatadog
-          policy: self.write.pr
+      # - uses: DataDog/dd-octo-sts-action@acaa02eee7e3bb0839e4272dacb37b8f3b58ba80 # v1.0.3
+      #   id: octo-sts
+      #   with:
+      #     scope: DataDog/libdatadog
+      #     policy: self.write.pr
 
       - name: Create a PR
         env:
-          GH_TOKEN: ${{ steps.octo-sts.outputs.token }}
+          # GH_TOKEN: ${{ steps.octo-sts.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
           MAIN_START_REF: ${{ inputs.main_start_ref }}
           MAIN_BRANCH: ${{ env.MAIN_BRANCH }}
           BYPASS_STANDARD_CHECKS: ${{ inputs.bypass_standard_checks }}
