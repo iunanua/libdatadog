@@ -148,7 +148,7 @@ async fn fetch_and_hash_response<C: HttpClientCapability + SleepCapability>(
 /// In that lifecycle, `trigger()` waits for the next refresh event and `run()` performs a single
 /// fetch.
 ///
-/// You can access the current state with [`crate::agent_info::get_agent_info`].
+/// You can access the current state with [`crate::agent_info::current_agent_info`].
 ///
 /// # Response observer
 /// When the fetcher is created it also returns a [`ResponseObserver`] which can be used to check
@@ -176,7 +176,7 @@ async fn fetch_and_hash_response<C: HttpClientCapability + SleepCapability>(
 /// runtime.spawn_worker(fetcher, true)?;
 ///
 /// // Get the Arc to access the info
-/// let agent_info_arc = agent_info::get_agent_info();
+/// let agent_info_arc = agent_info::current_agent_info();
 ///
 /// // Access the info
 /// if let Some(agent_info) = agent_info_arc.as_ref() {
@@ -607,13 +607,13 @@ mod single_threaded_tests {
             endpoint.clone(),
             Duration::from_millis(100),
         );
-        assert!(agent_info::get_agent_info().is_none());
+        assert!(agent_info::current_agent_info().is_none());
         let shared_runtime = SharedRuntime::new().unwrap();
         let _ = shared_runtime.spawn_worker(fetcher, true).unwrap();
 
         // Wait until the info is fetched
         let start = std::time::Instant::now();
-        while agent_info::get_agent_info().is_none() {
+        while agent_info::current_agent_info().is_none() {
             assert!(
                 start.elapsed() <= Duration::from_secs(10),
                 "Timeout waiting for first /info fetch"
@@ -621,7 +621,7 @@ mod single_threaded_tests {
             std::thread::sleep(Duration::from_millis(100));
         }
 
-        let version_1 = agent_info::get_agent_info()
+        let version_1 = agent_info::current_agent_info()
             .as_ref()
             .unwrap()
             .info
@@ -654,7 +654,7 @@ mod single_threaded_tests {
         // very few operations. We wait for a maximum of 1s before failing the test and that should
         // give way more time than necessary.
         for _ in 0..10 {
-            let version_2 = agent_info::get_agent_info()
+            let version_2 = agent_info::current_agent_info()
                 .as_ref()
                 .unwrap()
                 .info

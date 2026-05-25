@@ -345,7 +345,7 @@ impl<C: HttpClientCapability + SleepCapability + MaybeSend + Sync + 'static> Tra
 
     #[cfg(not(target_arch = "wasm32"))]
     fn check_agent_info(&self) {
-        if let Some(agent_info) = agent_info::get_agent_info() {
+        if let Some(agent_info) = agent_info::current_agent_info() {
             if self.has_agent_info_state_changed(&agent_info) {
                 match &**self.client_side_stats.status.load() {
                     StatsComputationStatus::Disabled => {}
@@ -412,7 +412,7 @@ impl<C: HttpClientCapability + SleepCapability + MaybeSend + Sync + 'static> Tra
             if std::time::Instant::now().duration_since(start) > timeout {
                 anyhow::bail!("Timeout waiting for agent info to be ready",);
             }
-            if agent_info::get_agent_info().is_some() {
+            if agent_info::current_agent_info().is_some() {
                 return Ok(());
             }
             tokio::time::sleep(Duration::from_millis(10)).await;
@@ -1916,7 +1916,7 @@ mod single_threaded_tests {
         let data = msgpack_encoder::v04::to_vec(&[trace_chunk]);
 
         // Wait for the info fetcher to get the config
-        while agent_info::get_agent_info().is_none() {
+        while agent_info::current_agent_info().is_none() {
             std::thread::sleep(Duration::from_millis(100));
         }
 
@@ -2016,7 +2016,7 @@ mod single_threaded_tests {
 
         // Wait for agent_info to be present so that sending a trace will trigger the stats worker
         // to start
-        while agent_info::get_agent_info().is_none() {
+        while agent_info::current_agent_info().is_none() {
             std::thread::sleep(Duration::from_millis(100));
         }
 
@@ -2101,7 +2101,7 @@ mod single_threaded_tests {
         let runtime = Arc::new(SharedRuntime::new().unwrap());
         let exporter = build_obfuscation_test_exporter(server.url("/"), runtime.clone(), opt_in);
 
-        while agent_info::get_agent_info().is_none() {
+        while agent_info::current_agent_info().is_none() {
             std::thread::sleep(Duration::from_millis(100));
         }
 

@@ -371,6 +371,10 @@ impl Endpoint {
         self.url.scheme_str() == Some("file")
     }
 
+    pub fn is_unix_endpoint(&self) -> bool {
+        self.url.scheme_str() == Some("unix")
+    }
+
     /// Set a custom timeout for this endpoint.
     /// If not called, uses the default timeout of 3000ms.
     ///

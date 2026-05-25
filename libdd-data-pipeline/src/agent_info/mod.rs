@@ -25,7 +25,7 @@ static AGENT_INFO_CACHE: LazyLock<ArcSwapOption<schema::AgentInfo>> =
 ///
 /// Returns `Some(Arc<AgentInfo>)` if an [`AgentInfo`] has been successfully
 /// fetched at least once, or `None` if no [`AgentInfo`] is available yet.
-pub fn get_agent_info() -> Option<Arc<schema::AgentInfo>> {
+pub fn current_agent_info() -> Option<Arc<schema::AgentInfo>> {
     AGENT_INFO_CACHE.load_full()
 }
 

@@ -36,10 +36,10 @@ mod tracing_integration_tests {
             AgentInfoFetcher::<NativeCapabilities>::new(endpoint, Duration::from_secs(1));
         tokio::spawn(async move { fetcher.run().await });
         let info_received = async {
-            while agent_info::get_agent_info().is_none() {
+            while agent_info::current_agent_info().is_none() {
                 tokio::time::sleep(Duration::from_millis(500)).await;
             }
-            agent_info::get_agent_info().unwrap()
+            agent_info::current_agent_info().unwrap()
         };
 
         let info = tokio::time::timeout(Duration::from_secs(10), info_received)
