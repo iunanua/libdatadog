@@ -30,21 +30,21 @@ jobs:
         continue-on-error: true
         with:
           name: release-dispatch-data
-          path: /tmp
+          path: .
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Skip when artifact missing
-        if: hashFiles('/tmp/release-metadata.json') == ''
+        if: hashFiles('release-metadata.json') == ''
         run: |
           echo "release-dispatch-data artifact not available (dispatch likely failed before uploading). Nothing to do."
 
       - name: Load metadata
         id: meta
-        if: hashFiles('/tmp/release-metadata.json') != ''
+        if: hashFiles('release-metadata.json') != ''
         run: |
           set -euo pipefail
-          META=/tmp/release-metadata.json
+          META="$GITHUB_WORKSPACE/release-metadata.json"
           echo "Release metadata:"
           cat "$META"
           {
