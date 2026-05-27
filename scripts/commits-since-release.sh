@@ -67,10 +67,12 @@ ${arg#--exclude=}"
             echo "  ./commits-since-release.sh --exclude='^chore:' --exclude='^ci:' \"\$JSON\""
             echo ""
             echo "Output JSON format:"
-            echo '  [{"name":"crate-name","version":"1.0.0","tag":"crate-name-v1.0.0","tag_exists":true,"breaking_change":false,"commits":[...]}]'
+            echo '  [{"name":"crate-name","version":"1.0.0","tag":"crate-name-v1.0.0","tag_exists":true,"breaking_change":false,"commits":[{"hash":"...","subject":"...","author":"...","date":"...","breaking_change":false}]}]'
             echo ""
-            echo "breaking_change: true when any non-excluded commit subject uses the conventional-commit"
-            echo "  breaking marker, e.g. 'feat!:', 'fix(scope)!:', 'refactor(api)!:'."
+            echo "breaking_change (crate level): true when any non-excluded commit subject uses the"
+            echo "  conventional-commit breaking marker, e.g. 'feat!:', 'fix(scope)!:', 'refactor(api)!:'."
+            echo "breaking_change (commit level): same check, per commit. Downstream consumers can"
+            echo "  filter commits[].breaking_change == true to keep only the breaking ones."
             exit 0
             ;;
         -*)
@@ -225,9 +227,12 @@ while read -r crate; do
 
                 if is_breaking_change_subject "$subject"; then
                     BREAKING_CHANGE=true
+                    IS_BREAKING=true
+                else
+                    IS_BREAKING=false
                 fi
 
-                COMMITS_JSON+="{\"hash\":\"$hash\",\"subject\":$subject_escaped,\"author\":$author_escaped,\"date\":\"$date\"}"
+                COMMITS_JSON+="{\"hash\":\"$hash\",\"subject\":$subject_escaped,\"author\":$author_escaped,\"date\":\"$date\",\"breaking_change\":$IS_BREAKING}"
             fi
         done < <(git log "$COMMIT_RANGE" --format="%H%x1F%s%x1F%an%x1F%aI" -- "$CRATE_PATH" 2>/dev/null || true)
         

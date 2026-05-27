@@ -1,10 +1,12 @@
 name: Release - Alternative release proposal PR by Claude
 
 # Always runs after release-proposal-dispatch.yml completes. Reads the
-# `release-dispatch-data` artifact uploaded by that workflow, asks
-# scripts/breaking-change-bumps.sh which crates actually need a major bump,
-# and (when there are any) opens an alternative PR stacked on top of the
-# release proposal branch with the additional version bumps.
+# `release-dispatch-data` artifact uploaded by that workflow, filters
+# candidate crates (breaking_change=true, level!=major, not initial release),
+# then asks scripts/semver-level-claude.sh (Claude via the Anthropic SDK) to
+# verify per-crate whether the commits actually break the public API. For the
+# crates Claude confirms, opens an alternative PR stacked on top of the
+# release proposal branch with the additional major bumps.
 on:
   workflow_run:
     workflows: ["Release - Open a release proposal PR"]
@@ -85,14 +87,22 @@ jobs:
           git archive "$WF_SHA" scripts | tar -x -C "$DEST"
           echo "WORKFLOW_SCRIPTS_ROOT=${DEST}/scripts" >> "$GITHUB_ENV"
 
-      - name: Identify crates needing a verified major bump
+      - name: Identify candidate crates for breaking-change verification
         if: steps.meta.outputs.branch_name != ''
         id: identify
         run: |
           set -euo pipefail
-          "${WORKFLOW_SCRIPTS_ROOT}/breaking-change-bumps.sh" /tmp/api-changes-with-major-bumps.json > /tmp/breaking-bumps.json
-          echo "Verified breaking-change bumps:"
+          # Candidates: crates where the dispatch workflow saw a breaking-change
+          # commit (.breaking_change == true) but did not promote them to a major
+          # bump (.level != "major"), excluding initial releases.
+          jq '[ .[]
+                | select(.breaking_change == true
+                         and .level != "major"
+                         and (.initial_release // "false") != "true") ]' \
+             /tmp/api-changes-with-major-bumps.json > /tmp/breaking-bumps.json
+          echo "Candidate crates for verification:"
           jq . /tmp/breaking-bumps.json
+          
           COUNT=$(jq 'length' /tmp/breaking-bumps.json)
           if [ "$COUNT" -gt 0 ]; then
             REVIEW_NEEDED=true
@@ -162,12 +172,14 @@ jobs:
           git config --global user.name "$GIT_USER_NAME"
           git config --global user.email "$GIT_USER_EMAIL"
 
+      - run: npm install @anthropic-ai/sdk
       - name: Create alternative branch and apply major bumps
         if: steps.identify.outputs.review_needed == 'true'
         id: alt-branch
         env:
           PROPOSAL_BRANCH_PREFIX: ${{ steps.meta.outputs.proposal_branch_prefix }}
           CRATES_BRANCH: ${{ steps.meta.outputs.crates_branch }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
@@ -179,18 +191,38 @@ jobs:
           jq -c '.[]' /tmp/breaking-bumps.json | while read -r row; do
             NAME=$(echo "$row" | jq -r '.name')
             PREV_TAG=$(echo "$row" | jq -r '.prev_tag // empty')
-            echo "Applying major bump for $NAME (prev_tag=${PREV_TAG:-<none>})..."
+            # Only forward conventional-commit breaking commits to Claude;
+            # the rest cannot promote this crate to major.
+            mapfile -t COMMITS < <(echo "$row" | jq -r '.commits[]? | select(.breaking_change == true) | .hash')
+
+            if [ ${#COMMITS[@]} -eq 0 ]; then
+              echo "Crate $NAME: no breaking-change commits in candidate set; skipping."
+              continue
+            fi
+
+            echo "Crate $NAME: asking Claude to verify ${#COMMITS[@]} breaking-change commit(s)..."
+            VERDICT=$("${WORKFLOW_SCRIPTS_ROOT}/semver-level-claude.sh" "$NAME" "${COMMITS[@]}")
+            echo "Verdict: $VERDICT"
+            BREAKING=$(echo "$VERDICT" | jq -r '.breaking')
+
+            if [ "$BREAKING" != "true" ]; then
+              echo "Crate $NAME: Claude did not confirm a breaking change — skipping major bump."
+              continue
+            fi
+
+            echo "Crate $NAME: applying major bump (prev_tag=${PREV_TAG:-<none>})..."
             if [ -n "$PREV_TAG" ]; then
               cargo release version -p "$NAME" --prev-tag-name "$PREV_TAG" --allow-branch "$ALT_BRANCH" -x major --no-confirm
             else
               cargo release version -p "$NAME" --allow-branch "$ALT_BRANCH" -x major --no-confirm
             fi
-            git commit -am "chore(release): promote $NAME to major due to breaking-change commits"
+            git commit -am "chore(release): promote $NAME to major (Claude-verified breaking change)"
           done
 
           if git diff --quiet "$BASE_SHA" HEAD; then
-            echo "No commits produced after bumping; aborting." >&2
-            exit 1
+            echo "Claude verified no breaking changes for any candidate crate; nothing to push."
+            echo "no_bumps_applied=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
           # Oldest → newest, matching cargo-release's commit-headless ordering.
@@ -200,7 +232,7 @@ jobs:
           echo "commits=$COMMITS" >> "$GITHUB_OUTPUT"
 
       - name: Push alternative commits
-        if: steps.identify.outputs.review_needed == 'true'
+        if: steps.identify.outputs.review_needed == 'true' && steps.alt-branch.outputs.no_bumps_applied != 'true'
         uses: DataDog/commit-headless@action/v2.0.3
         with:
           branch: ${{ steps.alt-branch.outputs.alt_branch }}
@@ -209,7 +241,7 @@ jobs:
           commits: "${{ steps.alt-branch.outputs.commits }}"
 
       - name: Create alternative PR
-        if: steps.identify.outputs.review_needed == 'true'
+        if: steps.identify.outputs.review_needed == 'true' && steps.alt-branch.outputs.no_bumps_applied != 'true'
         env:
           GH_TOKEN: ${{ steps.octo-sts.outputs.token }}
           PROPOSAL_BRANCH: ${{ steps.meta.outputs.branch_name }}
@@ -233,7 +265,7 @@ jobs:
 
           PR_BODY="# Alternative to \`$PROPOSAL_BRANCH\` with verified breaking-change major bumps
 
-          The breaking-change verifier (\`scripts/breaking-change-bumps.sh\`) flagged the crates below as needing a major bump that the main proposal did not apply. This PR is stacked on top of the release proposal and is intended to be merged together with it.
+          The breaking-change verifier (\`scripts/semver-level-claude.sh\`) confirmed that the crates below need a major bump that the main proposal did not apply. This PR is stacked on top of the release proposal and is intended to be merged together with it.
 
           ${BUMPS_BODY}"
 
