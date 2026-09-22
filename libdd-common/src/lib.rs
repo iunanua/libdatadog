@@ -565,6 +565,14 @@ impl Endpoint {
     }
 }
 
+pub fn epa(url: &str) -> anyhow::Result<Endpoint> {
+    let uri = parse_uri(url)?;
+    Ok(Endpoint {
+        url: uri,
+        ..Default::default()
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::parse_uri;
