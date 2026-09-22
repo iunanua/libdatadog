@@ -29,6 +29,8 @@ struct Args {
 }
 
 fn main() -> Result<()> {
+    log::info!("Kaixooo!!!");
+
     env_logger::init();
     let args = Args::parse();
     let base_ref = args.base_ref.strip_prefix("origin/").unwrap_or(&args.base_ref).to_string();
